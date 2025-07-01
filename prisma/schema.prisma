@@ -7,7 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-
 enum Role {
   user
   admin
@@ -44,7 +43,6 @@ model User {
   email          String         @unique
   password       String
   role           Role           @default(user)
-
   submissions    Submission[]
   subscriptions  Subscription[]
 }
@@ -53,11 +51,9 @@ model Plan {
   id          String   @id @default(cuid())
   name        String   
   price       Int      
-  currency    String   
   duration    Int      
   description String?
   isActive    Boolean  @default(true)
-
   subscriptions Subscription[]
 }
 
@@ -72,7 +68,6 @@ model Subscription {
   endDate     DateTime
   createdAt   DateTime            @default(now())
   updatedAt   DateTime            @updatedAt
-
   externalPaymentId String?       // Razorpay/Stripe reference
 }
 
@@ -111,7 +106,6 @@ model QuizSection {
   name     String
   quizId   String
   quiz     Quiz     @relation(fields: [quizId], references: [id])
-
   questions Question[]
 }
 
