@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -11,4 +5,155 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+
+enum Role {
+  user
+  admin
+}
+
+enum QuizType {
+  fullLength
+  sectionWise
+  topicWise
+}
+
+enum QuestionType {
+  singleCorrect
+  multipleCorrect
+  Boolean
+}
+
+enum SubscriptionStatus {
+  active
+  expired
+  cancelled
+  failed
+}
+
+enum SubmissionStatus {
+  inProgress
+  completed
+  abandoned
+}
+
+model User {
+  id             String         @id @default(cuid())
+  name           String
+  email          String         @unique
+  password       String
+  role           Role           @default(user)
+
+  submissions    Submission[]
+  subscriptions  Subscription[]
+}
+
+model Plan {
+  id          String   @id @default(cuid())
+  name        String   
+  price       Int      
+  currency    String   
+  duration    Int      
+  description String?
+  isActive    Boolean  @default(true)
+
+  subscriptions Subscription[]
+}
+
+model Subscription {
+  id          String              @id @default(cuid())
+  userId      String
+  user        User                @relation(fields: [userId], references: [id])
+  planId      String
+  plan        Plan                @relation(fields: [planId], references: [id])
+  status      SubscriptionStatus  @default(active)
+  startDate   DateTime            @default(now())
+  endDate     DateTime
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  externalPaymentId String?       // Razorpay/Stripe reference
+}
+
+model Section {
+  id        String   @id @default(cuid())
+  name      String
+  isDeleted Boolean  @default(false)
+  topics    Topic[]
+  Quiz Quiz[]
+}
+
+model Topic {
+  id        String   @id @default(cuid())
+  name      String
+  isDeleted Boolean  @default(false)
+  sectionId String
+  quiz Quiz[]
+  section   Section  @relation(fields: [sectionId], references: [id])
+}
+
+model Quiz {
+  id           String         @id @default(cuid())
+  type         QuizType
+  topicId String?
+  sectionId String?
+  title        String
+  duration     Int           
+  quizSections QuizSection[]
+  submissions  Submission[]
+  Topic Topic? @relation(fields: [topicId],references: [id])
+  section Section? @relation(fields: [sectionId],references: [id])
+}
+
+model QuizSection {
+  id       String   @id @default(cuid())
+  name     String
+  quizId   String
+  quiz     Quiz     @relation(fields: [quizId], references: [id])
+
+  questions Question[]
+}
+
+model Question {
+  id             String         @id @default(cuid())
+  image          String?
+  questionType   QuestionType
+  question       String
+  optionA        String
+  optionB        String
+  optionC        String
+  optionD        String
+  correctOption  String[]       @default([]) @db.VarChar(255)
+  quizSectionId  String
+  isDeleted Boolean
+  quizSection    QuizSection    @relation(fields: [quizSectionId], references: [id])
+  submittedAnswers SubmittedAnswer[]
+}
+
+model Submission {
+  id          String            @id @default(cuid())
+  userId      String
+  user        User              @relation(fields: [userId], references: [id])
+  quizId      String
+  quiz        Quiz              @relation(fields: [quizId], references: [id])
+  startedAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  endedAt     DateTime?
+  status      SubmissionStatus  @default(inProgress)
+  score       Float?
+  answers     SubmittedAnswer[]
+}
+
+model SubmittedAnswer {
+  id              String       @id @default(cuid())
+  submissionId    String
+  submission      Submission   @relation(fields: [submissionId], references: [id])
+  questionId      String
+  question        Question     @relation(fields: [questionId], references: [id])
+  selectedOption  String[]     @default([]) @db.VarChar(255)
+  isCorrect       Boolean?    
+  answeredAt      DateTime     @default(now())
+  flagged         Boolean      @default(false)
+  timeTakenSec    Int?        
 }
