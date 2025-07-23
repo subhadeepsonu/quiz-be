@@ -1,16 +1,15 @@
-import { Router } from 'express';
+import { Router } from "express";
 import {
   getAllSection,
-  getSection,
   createSection,
   updateSection,
-  deleteSection
-} from '../controllers/section.controller';
+  deleteSection,
+} from "../controllers/section.controller";
+import { middleware } from "../middleware/middleware";
 
 export const sectionRouter = Router();
 
-sectionRouter.get('/', getAllSection);
-sectionRouter.get('/:id', getSection);
-sectionRouter.post('/', createSection);
-sectionRouter.put('/:id', updateSection);
-sectionRouter.delete('/:id', deleteSection);
+sectionRouter.get("/", middleware(["admin", "user"]), getAllSection);
+sectionRouter.post("/", middleware(["admin"]), createSection);
+sectionRouter.put("/:id", middleware(["admin"]), updateSection);
+sectionRouter.delete("/:id", middleware(["admin"]), deleteSection);

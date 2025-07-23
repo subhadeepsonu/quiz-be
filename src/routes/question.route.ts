@@ -1,16 +1,17 @@
-import { Router } from 'express';
+import { Router } from "express";
 import {
   getAllQuestion,
   getQuestion,
   createQuestion,
   updateQuestion,
-  deleteQuestion
-} from '../controllers/question.controller';
+  deleteQuestion,
+} from "../controllers/question.controller";
+import { middleware } from "../middleware/middleware";
 
 export const questionRouter = Router();
 
-questionRouter.get('/', getAllQuestion);
-questionRouter.get('/:id', getQuestion);
-questionRouter.post('/', createQuestion);
-questionRouter.put('/:id', updateQuestion);
-questionRouter.delete('/:id', deleteQuestion);
+questionRouter.get("/", middleware(["admin", "user"]), getAllQuestion);
+questionRouter.get("/:id", middleware(["admin", "user"]), getQuestion);
+questionRouter.post("/", middleware(["admin"]), createQuestion);
+questionRouter.put("/:id", middleware(["admin"]), updateQuestion);
+questionRouter.delete("/:id", middleware(["admin"]), deleteQuestion);

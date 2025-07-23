@@ -70,14 +70,13 @@ model Subscription {
   endDate     DateTime
   createdAt   DateTime            @default(now())
   updatedAt   DateTime            @updatedAt
-  externalPaymentId String?       // Razorpay/Stripe reference
+  externalPaymentId String?      
 }
 
 model Section {
   id        String   @id @default(cuid())
   name      String
   isDeleted Boolean  @default(false)
-  topics    Topic[]
   Quiz Quiz[]
 }
 
@@ -85,15 +84,14 @@ model Topic {
   id        String   @id @default(cuid())
   name      String
   isDeleted Boolean  @default(false)
-  sectionId String
   quiz Quiz[]
-  section   Section  @relation(fields: [sectionId], references: [id])
+  
 }
 
 model Quiz {
   id           String         @id @default(cuid())
   type         QuizType
-  topicId String?
+  topicId   String?
   sectionId String?
   title        String
   duration     Int           
@@ -106,7 +104,7 @@ model Quiz {
 model QuizSection {
   id       String   @id @default(cuid())
   name     String
-  isCalcutorAllowed Boolean @default(false)
+  isCalculatorAllowed Boolean @default(false)
   quizId   String
   quiz     Quiz     @relation(fields: [quizId], references: [id])
   questions Question[]

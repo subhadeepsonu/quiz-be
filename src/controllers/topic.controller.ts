@@ -5,16 +5,8 @@ import { topicValidator } from "../validator/topic.validator";
 
 export async function getAllTopic(req: Request, res: Response) {
   try {
-    const sectionId = req.query.sectionId as string | undefined;
-    if (!sectionId) {
-      res
-        .status(StatusCodes.BAD_REQUEST)
-        .json({ error: "Section ID is required" });
-      return;
-    }
     const topics = await prisma.topic.findMany({
       where: {
-        sectionId: sectionId,
         isDeleted: false,
       },
     });
@@ -45,7 +37,6 @@ export async function createTopic(req: Request, res: Response) {
     const topic = await prisma.topic.create({
       data: {
         name: check.data.name,
-        sectionId: check.data.sectionId,
       },
     });
     res.status(StatusCodes.CREATED).json({
@@ -86,7 +77,6 @@ export async function updateTopic(req: Request, res: Response) {
       where: { id: topicId },
       data: {
         name: check.data.name,
-        sectionId: check.data.sectionId,
       },
     });
     res.status(StatusCodes.OK).json({

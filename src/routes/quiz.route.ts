@@ -1,16 +1,17 @@
-import { Router } from 'express';
+import { Router } from "express";
 import {
   getAllQuiz,
   getQuiz,
   createQuiz,
   updateQuiz,
-  deleteQuiz
-} from '../controllers/quiz.controller';
+  deleteQuiz,
+} from "../controllers/quiz.controller";
+import { middleware } from "../middleware/middleware";
 
 export const quizRouter = Router();
 
-quizRouter.get('/', getAllQuiz);
-quizRouter.get('/:id', getQuiz);
-quizRouter.post('/', createQuiz);
-quizRouter.put('/:id', updateQuiz);
-quizRouter.delete('/:id', deleteQuiz);
+quizRouter.get("/", middleware(["admin", "user"]), getAllQuiz);
+quizRouter.get("/:id", middleware(["admin", "user"]), getQuiz);
+quizRouter.post("/", middleware(["admin"]), createQuiz);
+quizRouter.put("/:id", middleware(["admin"]), updateQuiz);
+quizRouter.delete("/:id", middleware(["admin"]), deleteQuiz);

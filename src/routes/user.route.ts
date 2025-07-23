@@ -5,12 +5,15 @@ import {
   createUser,
   updateUser,
   deleteUser,
+  getMe,
 } from "../controllers/user.controller";
+import { middleware } from "../middleware/middleware";
 
 export const userRouter = Router();
 
-userRouter.get("/", getAllUser);
-userRouter.get("/:id", getUser);
-userRouter.post("/", createUser);
-userRouter.put("/:id", updateUser);
-userRouter.delete("/:id", deleteUser);
+userRouter.get("/", middleware(["admin"]), getAllUser);
+userRouter.get("/me", middleware(["user", "admin"]), getMe);
+userRouter.get("/:id", middleware(["admin"]), getUser);
+userRouter.post("/", middleware(["admin"]), createUser);
+userRouter.put("/:id", middleware(["admin"]), updateUser);
+userRouter.delete("/:id", middleware(["admin"]), deleteUser);

@@ -82,8 +82,8 @@ export async function createQuiz(req: Request, res: Response) {
         title: check.data.title,
         duration: check.data.duration,
         type: check.data.type,
-        sectionId: check.data.sectionId,
-        topicId: check.data.topicId,
+        sectionId: check.data.sectionId === "" ? null : check.data.sectionId,
+        topicId: check.data.topicId === "" ? null : check.data.topicId,
       },
     });
     res.status(StatusCodes.CREATED).json({
@@ -92,6 +92,7 @@ export async function createQuiz(req: Request, res: Response) {
     });
     return;
   } catch (error) {
+    console.log(error);
     res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
       .json({ error: "Internal Server Error" });
@@ -117,8 +118,8 @@ export async function updateQuiz(req: Request, res: Response) {
         title: check.data.title,
         duration: check.data.duration,
         type: check.data.type,
-        sectionId: check.data.sectionId,
-        topicId: check.data.topicId,
+        sectionId: check.data.sectionId === "" ? null : check.data.sectionId,
+        topicId: check.data.topicId === "" ? null : check.data.topicId,
       },
     });
     res.status(StatusCodes.OK).json({

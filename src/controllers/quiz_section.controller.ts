@@ -1,7 +1,10 @@
 import { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
 import { prisma } from "../db";
-import { QuizSectionValidator } from "../validator/quiz_section.validator";
+import {
+  QuizSectionValidator,
+  UpdateQuizSectionValidator,
+} from "../validator/quiz_section.validator";
 
 export async function getAllQuiz_section(req: Request, res: Response) {
   try {
@@ -35,6 +38,17 @@ export async function getAllQuiz_section(req: Request, res: Response) {
 
 export async function getQuiz_section(req: Request, res: Response) {
   try {
+    const id = req.params.id;
+    const quizSections = await prisma.quizSection.findMany({
+      where: {
+        quizId: id,
+      },
+    });
+    res.status(StatusCodes.OK).json({
+      message: "quiz sections",
+      data: quizSections,
+    });
+    return;
   } catch (error) {
     res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
@@ -58,7 +72,7 @@ export async function createQuiz_section(req: Request, res: Response) {
       data: {
         name: check.data.name,
         quizId: check.data.quizId,
-        isCalcutorAllowed: check.data.isCalculatorAllowed,
+        isCalculatorAllowed: check.data.isCalculatorAllowed,
       },
     });
     res.status(StatusCodes.CREATED).json({
@@ -78,7 +92,7 @@ export async function updateQuiz_section(req: Request, res: Response) {
   try {
     const body = req.body;
     const sectionId = req.params.id;
-    const check = QuizSectionValidator.safeParse(body);
+    const check = UpdateQuizSectionValidator.safeParse(body);
     if (!check.success) {
       res.status(StatusCodes.BAD_REQUEST).json({
         error: "Invalid request body",
@@ -90,7 +104,7 @@ export async function updateQuiz_section(req: Request, res: Response) {
       where: { id: sectionId },
       data: {
         name: check.data.name,
-        isCalcutorAllowed: check.data.isCalculatorAllowed,
+        isCalculatorAllowed: check.data.isCalculatorAllowed,
       },
     });
     res.status(StatusCodes.OK).json({

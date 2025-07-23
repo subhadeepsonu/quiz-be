@@ -1,11 +1,11 @@
 import { QuizType } from "@prisma/client";
-import z from "zod";
+import z, { literal } from "zod";
 
 export const QuizValidator = z
   .object({
     type: z.nativeEnum(QuizType),
-    topicId: z.string().cuid().optional(),
-    sectionId: z.string().cuid().optional(),
+    topicId: z.string().cuid().optional().or(literal("")),
+    sectionId: z.string().cuid().optional().or(literal("")),
     title: z.string().min(1),
     duration: z.coerce.number().int().positive(),
   })

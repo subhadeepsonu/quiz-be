@@ -39,6 +39,34 @@ export async function getAllUser(req: Request, res: Response) {
   }
 }
 
+export async function getMe(req: Request, res: Response) {
+  try {
+    const id = req.body.user.id;
+    const me = await prisma.user.findUnique({
+      where: { id },
+      select: {
+        role: true,
+        name: true,
+      },
+    });
+    if (!me) {
+      res.status(StatusCodes.BAD_REQUEST).json({
+        message: "user not found",
+      });
+      return;
+    }
+    res.status(StatusCodes.ACCEPTED).json({
+      message: "user verifed",
+      data: me,
+    });
+    return;
+  } catch (error) {
+    res
+      .status(StatusCodes.INTERNAL_SERVER_ERROR)
+      .json({ error: "Internal Server Error" });
+    return;
+  }
+}
 export async function getUser(req: Request, res: Response) {
   try {
     // TODO: implement logic

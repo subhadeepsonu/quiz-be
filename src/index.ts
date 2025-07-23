@@ -10,9 +10,9 @@ import { submissionRouter } from "./routes/submission.route";
 import { topicRouter } from "./routes/topic.route";
 import { authRouter } from "./routes/auth.route";
 const app = express();
-
-app.use(cors());
 app.use(express.json());
+app.use(cors());
+
 app.get("/", (req, res) => {
   res.json({
     message: "Hello World",
@@ -23,7 +23,7 @@ app.use("/user", userRouter);
 app.use("/auth", authRouter);
 app.use("/plan", planRouter);
 app.use("/question", questionRouter);
-app.use("quiz-section", quiz_sectionRouter);
+app.use("/quiz-section", quiz_sectionRouter);
 app.use("/quiz", quizRouter);
 app.use("/section", sectionRouter);
 app.use("/submission", submissionRouter);
