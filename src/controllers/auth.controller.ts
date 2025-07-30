@@ -18,7 +18,6 @@ export async function login(req: Request, res: Response) {
     const checkUser = await prisma.user.findUnique({
       where: {
         email: check.data.email,
-        isEmailVerified: true,
       },
     });
     if (!checkUser) {
@@ -70,7 +69,6 @@ export async function adminLogin(req: Request, res: Response) {
     const checkUser = await prisma.user.findUnique({
       where: {
         email: check.data.email,
-        isEmailVerified: true,
         role: "admin",
       },
     });
@@ -113,7 +111,6 @@ export async function adminLogin(req: Request, res: Response) {
 export async function register(req: Request, res: Response) {
   try {
     const body = req.body;
-    console.log(body);
     const check = registerValidator.safeParse(body);
     if (!check.success) {
       res.status(StatusCodes.BAD_REQUEST).json({
@@ -125,7 +122,6 @@ export async function register(req: Request, res: Response) {
     const existingUser = await prisma.user.findUnique({
       where: {
         email: check.data.email,
-        isEmailVerified: true,
       },
     });
     if (existingUser) {

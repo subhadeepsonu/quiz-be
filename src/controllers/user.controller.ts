@@ -2,6 +2,9 @@ import { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
 import { prisma } from "../db";
 import { Role } from "@prisma/client";
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import { registerValidator } from "../validator/auth.validator";
 
 export async function getAllUser(req: Request, res: Response) {
   try {
@@ -11,15 +14,8 @@ export async function getAllUser(req: Request, res: Response) {
     const users = await prisma.user.findMany({
       skip: skip,
       take: limit,
-      where: {
-        isEmailVerified: true,
-      },
     });
-    const totalUsers = await prisma.user.count({
-      where: {
-        isEmailVerified: true,
-      },
-    });
+    const totalUsers = await prisma.user.count({});
     res.status(StatusCodes.OK).json({
       message: "Users fetched successfully",
       data: users,
@@ -80,7 +76,55 @@ export async function getUser(req: Request, res: Response) {
 
 export async function createUser(req: Request, res: Response) {
   try {
-    // TODO: implement logic
+    const body = req.body;
+    const check = registerValidator.safeParse(body);
+    if (!check.success) {
+      res.status(StatusCodes.BAD_REQUEST).json({
+        error: "Invalid request body",
+        details: check.error.errors,
+      });
+      return;
+    }
+    const existingUser = await prisma.user.findUnique({
+      where: {
+        email: check.data.email,
+      },
+    });
+    if (existingUser) {
+      res.status(StatusCodes.CONFLICT).json({
+        error: "User already exists",
+      });
+      return;
+    }
+    const hashedPassword = bcrypt.hashSync(check.data.password, 10);
+    const newUser = await prisma.user.upsert({
+      where: {
+        email: check.data.email,
+      },
+      update: {
+        name: check.data.name,
+        password: hashedPassword,
+        role: "admin",
+      },
+      create: {
+        name: check.data.name,
+        email: check.data.email,
+        password: hashedPassword,
+        role: "admin",
+      },
+    });
+    const user = {
+      id: newUser.id,
+      role: newUser.role,
+    };
+    const token = jwt.sign(user, process.env.JWT_SECRET!, {
+      expiresIn: "30d",
+    });
+    res.status(StatusCodes.CREATED).json({
+      message: "User registered successfully",
+      token: token,
+    });
+    return;
   } catch (error) {
     res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
@@ -88,7 +132,42 @@ export async function createUser(req: Request, res: Response) {
     return;
   }
 }
-
+export async function ChangeRole(req: Request, res: Response) {
+  try {
+    const body = req.body;
+    const id = req.params.id;
+    if (body.role != Role.admin && body.role != Role.user) {
+      res.status(StatusCodes.BAD_REQUEST).json({
+        message: "Invalid request",
+      });
+      return;
+    }
+    const user = await prisma.user.findUnique({
+      where: { id },
+    });
+    if (!user) {
+      res.status(StatusCodes.NOT_FOUND).json({
+        message: "User not found",
+      });
+      return;
+    }
+    await prisma.user.update({
+      where: { id },
+      data: {
+        role: body.role,
+      },
+    });
+    res.status(StatusCodes.ACCEPTED).json({
+      message: "User updated",
+    });
+    return;
+  } catch (error) {
+    res
+      .status(StatusCodes.INTERNAL_SERVER_ERROR)
+      .json({ error: "Internal Server Error" });
+    return;
+  }
+}
 export async function updateUser(req: Request, res: Response) {
   try {
     const userId = req.params.id;
@@ -98,7 +177,7 @@ export async function updateUser(req: Request, res: Response) {
       return;
     }
     const check = await prisma.user.findUnique({
-      where: { id: userId, isEmailVerified: true },
+      where: { id: userId },
     });
     if (!check) {
       res.status(StatusCodes.NOT_FOUND).json({ error: "User not found" });
@@ -127,7 +206,7 @@ export async function deleteUser(req: Request, res: Response) {
   try {
     const userId = req.params.id;
     const user = await prisma.user.findUnique({
-      where: { id: userId, isEmailVerified: true },
+      where: { id: userId },
     });
     if (!user) {
       res.status(StatusCodes.NOT_FOUND).json({ error: "User not found" });

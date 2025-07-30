@@ -14,6 +14,7 @@ export async function getAllQuiz(req: Request, res: Response) {
         ...(topicId && { topicId }),
         ...(sectionId && { sectionId }),
         ...(quizType && { type: quizType }),
+        isDeleted: false,
       },
       include: {
         quizSections: {
@@ -40,7 +41,7 @@ export async function getQuiz(req: Request, res: Response) {
   try {
     const quizId = req.params.id;
     const quiz = await prisma.quiz.findUnique({
-      where: { id: quizId },
+      where: { id: quizId, isDeleted: false },
       include: {
         quizSections: {
           include: {
@@ -145,8 +146,11 @@ export async function deleteQuiz(req: Request, res: Response) {
       res.status(StatusCodes.NOT_FOUND).json({ error: "Quiz not found" });
       return;
     }
-    await prisma.quiz.delete({
+    await prisma.quiz.update({
       where: { id: quizId },
+      data: {
+        isDeleted: true,
+      },
     });
     res.status(StatusCodes.OK).json({
       message: "Quiz deleted successfully",

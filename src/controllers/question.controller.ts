@@ -35,7 +35,18 @@ export async function getAllQuestion(req: Request, res: Response) {
 
 export async function getQuestion(req: Request, res: Response) {
   try {
-    // TODO: implement logic
+    const id = req.params.id;
+    const questions = await prisma.question.findMany({
+      where: {
+        quizSectionId: id,
+        isDeleted: false,
+      },
+    });
+    res.status(StatusCodes.ACCEPTED).json({
+      message: "questions",
+      data: questions,
+    });
+    return;
   } catch (error) {
     res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
@@ -67,6 +78,8 @@ export async function createQuestion(req: Request, res: Response) {
         correctOption: check.data.correctOption,
         image: check.data.image,
         quizSectionId: check.data.quizSectionId,
+        answer: check.data.answer,
+        answerImg: check.data.answerImgUrl,
       },
     });
     res.status(StatusCodes.CREATED).json({
@@ -115,6 +128,8 @@ export async function updateQuestion(req: Request, res: Response) {
         questionType: check.data.questionType,
         correctOption: check.data.correctOption,
         image: check.data.image,
+        answer: check.data.answer,
+        answerImg: check.data.answerImgUrl,
       },
     });
     res.status(StatusCodes.OK).json({
@@ -133,9 +148,11 @@ export async function updateQuestion(req: Request, res: Response) {
 export async function deleteQuestion(req: Request, res: Response) {
   try {
     const questionId = req.params.id;
+    console.log(questionId);
     const checkQuestion = await prisma.question.findUnique({
       where: { id: questionId, isDeleted: false },
     });
+    console.log(checkQuestion);
     if (!checkQuestion) {
       res.status(StatusCodes.NOT_FOUND).json({ error: "Question not found" });
       return;
@@ -149,6 +166,7 @@ export async function deleteQuestion(req: Request, res: Response) {
     });
     return;
   } catch (error) {
+    console.log(error);
     res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
       .json({ error: "Internal Server Error" });

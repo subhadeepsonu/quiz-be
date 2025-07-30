@@ -42,8 +42,6 @@ model User {
   name           String
   email          String         @unique
   password       String
-  isEmailVerified Boolean      @default(false)
-  
   role           Role           @default(user)
   submissions    Submission[]
   subscriptions  Subscription[]
@@ -94,7 +92,8 @@ model Quiz {
   topicId   String?
   sectionId String?
   title        String
-  duration     Int           
+  duration     Int     
+  isDeleted Boolean @default(false)      
   quizSections QuizSection[]
   submissions  Submission[]
   Topic Topic? @relation(fields: [topicId],references: [id])
@@ -106,6 +105,7 @@ model QuizSection {
   name     String
   isCalculatorAllowed Boolean @default(false)
   quizId   String
+  isDeleted Boolean @default(false)
   quiz     Quiz     @relation(fields: [quizId], references: [id])
   questions Question[]
 }
@@ -122,6 +122,8 @@ model Question {
   correctOption  String[]       @default([]) @db.VarChar(255)
   quizSectionId  String
   isDeleted Boolean
+  answerImg String?
+  answer String?
   quizSection    QuizSection    @relation(fields: [quizSectionId], references: [id])
   submittedAnswers SubmittedAnswer[]
 }

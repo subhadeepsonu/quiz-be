@@ -9,8 +9,7 @@ const CorrectOptionEnum = z.enum(["A", "B", "C", "D"]);
 
 export const QuestionSchema = z
   .object({
-    id: z.string().cuid().optional(),
-    image: z.string().url().optional(),
+    image: z.string().optional(),
     questionType: QuestionTypeEnum,
     question: z.string().min(1, "Question is required"),
     optionA: z.string().optional(),
@@ -20,6 +19,8 @@ export const QuestionSchema = z
     correctOption: z.array(CorrectOptionEnum).optional(),
     booleanAnswer: z.boolean().optional(),
     quizSectionId: z.string().cuid(),
+    answerImgUrl: z.string().optional(),
+    answer: z.string(),
   })
   .superRefine((data, ctx) => {
     if (data.questionType === "Boolean") {

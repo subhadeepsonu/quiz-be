@@ -17,7 +17,7 @@ export async function getAllQuiz_section(req: Request, res: Response) {
     }
 
     const quizSections = await prisma.quizSection.findMany({
-      where: { quizId: quizId },
+      where: { quizId: quizId, isDeleted: false },
       include: {
         questions: true,
       },
@@ -42,6 +42,7 @@ export async function getQuiz_section(req: Request, res: Response) {
     const quizSections = await prisma.quizSection.findMany({
       where: {
         quizId: id,
+        isDeleted: false,
       },
     });
     res.status(StatusCodes.OK).json({
@@ -132,8 +133,11 @@ export async function deleteQuiz_section(req: Request, res: Response) {
       });
       return;
     }
-    await prisma.quizSection.delete({
+    await prisma.quizSection.update({
       where: { id: sectionId },
+      data: {
+        isDeleted: true,
+      },
     });
     res.status(StatusCodes.OK).json({
       message: "Quiz section deleted successfully",
