@@ -5,7 +5,7 @@ export const QuestionTypeEnum = z.enum([
   "multipleCorrect",
   "Boolean",
 ]);
-const CorrectOptionEnum = z.enum(["A", "B", "C", "D"]);
+const CorrectOptionEnum = z.enum(["A", "B", "C", "D", "E"]);
 
 export const QuestionSchema = z
   .object({
@@ -16,6 +16,7 @@ export const QuestionSchema = z
     optionB: z.string().optional(),
     optionC: z.string().optional(),
     optionD: z.string().optional(),
+    optionE: z.string().optional(),
     correctOption: z.array(CorrectOptionEnum).optional(),
     booleanAnswer: z.boolean().optional(),
     quizSectionId: z.string().cuid(),
@@ -32,7 +33,11 @@ export const QuestionSchema = z
         });
       }
       const hasOptions =
-        data.optionA || data.optionB || data.optionC || data.optionD;
+        data.optionA ||
+        data.optionB ||
+        data.optionC ||
+        data.optionD ||
+        data.optionE;
       if (hasOptions) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
@@ -83,12 +88,13 @@ export const QuestionSchema = z
         "optionB",
         "optionC",
         "optionD",
+        "optionE",
       ].filter((opt) => !data[opt as keyof typeof data]);
       if (missingOptions.length > 0) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           message:
-            "Options A–D are required for single/multiple correct questions.",
+            "Options A–E are required for single/multiple correct questions.",
           path: [],
         });
       }

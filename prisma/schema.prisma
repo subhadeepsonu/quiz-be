@@ -119,6 +119,7 @@ model Question {
   optionB        String?
   optionC        String?
   optionD        String?
+  optionE String?
   correctOption  String[]       @default([]) @db.VarChar(255)
   quizSectionId  String
   isDeleted Boolean
