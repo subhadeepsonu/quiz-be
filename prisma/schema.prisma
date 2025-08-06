@@ -22,6 +22,7 @@ enum QuestionType {
   singleCorrect
   multipleCorrect
   Boolean
+  paragraph
 }
 
 enum SubscriptionStatus {
@@ -114,6 +115,7 @@ model Question {
   id             String         @id @default(cuid())
   image          String?
   questionType   QuestionType
+  paragraphText String?
   question       String
   optionA        String?
   optionB        String?

@@ -4,6 +4,7 @@ export const QuestionTypeEnum = z.enum([
   "singleCorrect",
   "multipleCorrect",
   "Boolean",
+  "paragraph",
 ]);
 const CorrectOptionEnum = z.enum(["A", "B", "C", "D", "E"]);
 
@@ -12,6 +13,7 @@ export const QuestionSchema = z
     image: z.string().optional(),
     questionType: QuestionTypeEnum,
     question: z.string().min(1, "Question is required"),
+    paragraphText: z.string().optional(),
     optionA: z.string().optional(),
     optionB: z.string().optional(),
     optionC: z.string().optional(),
@@ -24,7 +26,13 @@ export const QuestionSchema = z
     answer: z.string(),
   })
   .superRefine((data, ctx) => {
-    if (data.questionType === "Boolean") {
+    const isParagraph = data.questionType === "paragraph";
+    const isBoolean = data.questionType === "Boolean";
+    const isSingleCorrect =
+      data.questionType === "singleCorrect" || isParagraph;
+    const isMultipleCorrect = data.questionType === "multipleCorrect";
+
+    if (isBoolean) {
       if (data.booleanAnswer === undefined) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
@@ -32,16 +40,18 @@ export const QuestionSchema = z
           path: ["booleanAnswer"],
         });
       }
+
       const hasOptions =
         data.optionA ||
         data.optionB ||
         data.optionC ||
         data.optionD ||
         data.optionE;
+
       if (hasOptions) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: "Options A–D should not be provided for Boolean questions.",
+          message: "Options A–E should not be provided for Boolean questions.",
           path: [],
         });
       }
@@ -55,6 +65,16 @@ export const QuestionSchema = z
         });
       }
     } else {
+      // paragraph must have paragraphText
+      if (isParagraph && !data.paragraphText) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Paragraph text is required for paragraph type questions.",
+          path: ["paragraphText"],
+        });
+      }
+
+      // correctOption required
       if (!data.correctOption || data.correctOption.length === 0) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
@@ -63,17 +83,16 @@ export const QuestionSchema = z
         });
       }
 
-      if (
-        data.questionType === "singleCorrect" &&
-        data.correctOption?.length !== 1
-      ) {
+      // singleCorrect must have exactly one correct option
+      if (isSingleCorrect && data.correctOption?.length !== 1) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           message:
-            "Only one correct option is allowed for singleCorrect questions.",
+            "Only one correct option is allowed for singleCorrect/paragraph questions.",
           path: ["correctOption"],
         });
       }
+
       if (data.booleanAnswer !== undefined) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
@@ -94,7 +113,7 @@ export const QuestionSchema = z
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           message:
-            "Options A–E are required for single/multiple correct questions.",
+            "Options A–E are required for single/multiple/paragraph questions.",
           path: [],
         });
       }

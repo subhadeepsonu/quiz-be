@@ -9,6 +9,7 @@ import { sectionRouter } from "./routes/section.route";
 import { submissionRouter } from "./routes/submission.route";
 import { topicRouter } from "./routes/topic.route";
 import { authRouter } from "./routes/auth.route";
+import { uploadRouter } from "./routes/upload.route";
 const app = express();
 app.use(express.json());
 app.use(cors());
@@ -28,6 +29,7 @@ app.use("/quiz", quizRouter);
 app.use("/section", sectionRouter);
 app.use("/submission", submissionRouter);
 app.use("/topic", topicRouter);
+app.use("/upload", uploadRouter);
 
 app.listen(3000, () => {
   console.log("Server is running on port 3000");
