@@ -37,7 +37,7 @@ export async function generatePresignedUrl(req: Request, res: Response) {
 
     const command = new PutObjectCommand(params);
 
-    const signedUrl = await getSignedUrl(s3, command, { expiresIn: 300 }); // 5 mins
+    const signedUrl = await getSignedUrl(s3, command, { expiresIn: 300 });
     res.json({
       2: signedUrl,
       key,

@@ -82,6 +82,9 @@ export async function createQuestion(req: Request, res: Response) {
         quizSectionId: check.data.quizSectionId,
         answer: check.data.answer,
         answerImg: check.data.answerImgUrl,
+        blankOptions: check.data.blankOptions,
+        subQuestions: check.data.subQuestions,
+        tableData: check.data.tableData,
       },
     });
     res.status(StatusCodes.CREATED).json({
