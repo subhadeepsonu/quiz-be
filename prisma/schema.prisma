@@ -135,6 +135,7 @@ model Question {
   answerImg        String?
   answer           String?
   tableData        Json?            
+  caseStudyData Json?   
   blankOptions     Json?            
   subQuestions     Json?            
   quizSection      QuizSection       @relation(fields: [quizSectionId], references: [id])

@@ -10,6 +10,23 @@ const BlankOptionSchema = z.object({
   correct: z.string().min(1, "Correct answer is required"),
 });
 
+const CaseStudySectionSchema = z.object({
+  title: z.string().min(1, "Section title is required"),
+  content: z.string().min(1, "Section content is required"),
+});
+
+const CaseStudyQuestionSchema = z.object({
+  question: z.string().min(1, "Case study question text is required"),
+  type: z.enum(["singleCorrect", "multipleCorrect", "Boolean"]),
+  options: z.array(z.string()).optional(),
+  correctOption: z.array(CorrectOptionEnum).optional(),
+  booleanAnswer: z.boolean().optional(),
+});
+
+const CaseStudyDataSchema = z.object({
+  sections: z.array(CaseStudySectionSchema).min(1),
+  questions: z.array(CaseStudyQuestionSchema).min(1),
+});
 // Schema for table data
 const TableDataSchema = z.object({
   columns: z.array(z.string()).min(1, "At least one column is required"),
@@ -40,6 +57,7 @@ export const QuestionSchema = z
     quizSectionId: z.string().cuid(),
     answerImgUrl: z.string().optional(),
     answer: z.string(),
+    caseStudyData: CaseStudyDataSchema.optional(),
 
     // New fields for extended question types
     blankOptions: z.record(z.string(), BlankOptionSchema).optional(),
@@ -48,6 +66,7 @@ export const QuestionSchema = z
   })
   .superRefine((data, ctx) => {
     const isParagraph = data.questionType === "paragraph";
+    const isCaseStudy = data.questionType === "caseStudy";
     const isBoolean = data.questionType === "Boolean";
     const isSingleCorrect =
       data.questionType === "singleCorrect" || isParagraph;
@@ -63,7 +82,15 @@ export const QuestionSchema = z
       "paragraph",
       "tableWithOptions",
     ].includes(data.questionType);
-
+    if (isCaseStudy) {
+      if (!data.caseStudyData) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Case study data is required for caseStudy questions.",
+          path: ["caseStudyData"],
+        });
+      }
+    }
     // Boolean question validation
     if (isBoolean) {
       if (data.booleanAnswer === undefined) {
