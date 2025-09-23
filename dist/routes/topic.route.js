@@ -1,0 +1,11 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.topicRouter = void 0;
+const express_1 = require("express");
+const topic_controller_1 = require("../controllers/topic.controller");
+const middleware_1 = require("../middleware/middleware");
+exports.topicRouter = (0, express_1.Router)();
+exports.topicRouter.get("/", (0, middleware_1.middleware)(["user", "admin"]), topic_controller_1.getAllTopic);
+exports.topicRouter.post("/", (0, middleware_1.middleware)(["admin"]), topic_controller_1.createTopic);
+exports.topicRouter.put("/:id", (0, middleware_1.middleware)(["admin"]), topic_controller_1.updateTopic);
+exports.topicRouter.delete("/:id", (0, middleware_1.middleware)(["admin"]), topic_controller_1.deleteTopic);

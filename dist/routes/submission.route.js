@@ -1,0 +1,12 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.submissionRouter = void 0;
+const express_1 = require("express");
+const submission_controller_1 = require("../controllers/submission.controller");
+const middleware_1 = require("../middleware/middleware");
+exports.submissionRouter = (0, express_1.Router)();
+exports.submissionRouter.get("/", (0, middleware_1.middleware)(["user", "admin"]), submission_controller_1.getAllSubmission);
+exports.submissionRouter.get("/:id", submission_controller_1.getSubmission);
+exports.submissionRouter.post("/", submission_controller_1.createSubmission);
+exports.submissionRouter.put("/:id", submission_controller_1.updateSubmission);
+exports.submissionRouter.delete("/:id", submission_controller_1.deleteSubmission);

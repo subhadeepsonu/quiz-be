@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
 import { prisma } from "../db";
-import { QuestionSchema } from "../validator/question.validator";
+import { QuestionSchema, UpdateQuestionSchema } from "../validator/question.validator";
 
 export async function getAllQuestion(req: Request, res: Response) {
   try {
@@ -12,14 +12,17 @@ export async function getAllQuestion(req: Request, res: Response) {
         .json({ error: "Quiz ID is required" });
       return;
     }
-    const questions = await prisma.quizSection.findMany({
+
+    const questions = await prisma.question.findMany({
       where: {
         quizId: quizId,
+        isDeleted: false,
       },
-      include: {
-        questions: true,
-      },
+      orderBy: {
+        orderIndex: 'asc'
+      }
     });
+
     res.status(StatusCodes.OK).json({
       message: "Questions fetched successfully",
       data: questions,
@@ -36,15 +39,23 @@ export async function getAllQuestion(req: Request, res: Response) {
 export async function getQuestion(req: Request, res: Response) {
   try {
     const id = req.params.id;
-    const questions = await prisma.question.findMany({
+    const question = await prisma.question.findUnique({
       where: {
-        quizSectionId: id,
+        id: id,
         isDeleted: false,
       },
     });
-    res.status(StatusCodes.ACCEPTED).json({
-      message: "questions",
-      data: questions,
+
+    if (!question) {
+      res.status(StatusCodes.NOT_FOUND).json({
+        error: "Question not found",
+      });
+      return;
+    }
+
+    res.status(StatusCodes.OK).json({
+      message: "Question fetched successfully",
+      data: question,
     });
     return;
   } catch (error) {
@@ -66,28 +77,36 @@ export async function createQuestion(req: Request, res: Response) {
       });
       return;
     }
+
     const question = await prisma.question.create({
       data: {
+        questionText: check.data.questionText,
+        image: check.data.image,
+        questionType: check.data.questionType,
+        questionCategory: check.data.questionCategory,
+        paragraphText: check.data.paragraphText,
         optionA: check.data.optionA,
         optionB: check.data.optionB,
         optionC: check.data.optionC,
         optionD: check.data.optionD,
         optionE: check.data.optionE,
-        question: check.data.question,
-        paragraphText: check.data.paragraphText,
-        isDeleted: false,
-        questionType: check.data.questionType,
-        correctOption: check.data.correctOption,
-        image: check.data.image,
-        quizSectionId: check.data.quizSectionId,
-        answer: check.data.answer,
-        answerImg: check.data.answerImgUrl,
-        blankOptions: check.data.blankOptions,
-        subQuestions: check.data.subQuestions,
+        correctOptions: check.data.correctOption,
+        explanation: check.data.explanation,
+        answerImage: check.data.answerImage,
         tableData: check.data.tableData,
         caseStudyData: check.data.caseStudyData,
+        blankOptions: check.data.blankOptions,
+        subQuestions: check.data.subQuestions,
+        tags: check.data.tags,
+        points: check.data.points || 1,
+        quizId: check.data.quizId,
+        orderIndex: check.data.orderIndex || 0,
+        isDeleted: false,
+        sectionId: check.data.sectionId,
+        topicId: check.data.topicId
       },
     });
+
     res.status(StatusCodes.CREATED).json({
       message: "Question created successfully",
       data: question,
@@ -105,7 +124,7 @@ export async function updateQuestion(req: Request, res: Response) {
   try {
     const body = req.body;
     const questionId = req.params.id;
-    const check = QuestionSchema.safeParse(body);
+    const check = UpdateQuestionSchema.safeParse(body);
     if (!check.success) {
       res.status(StatusCodes.BAD_REQUEST).json({
         error: "Invalid request body",
@@ -113,6 +132,7 @@ export async function updateQuestion(req: Request, res: Response) {
       });
       return;
     }
+
     const checkQuestion = await prisma.question.findUnique({
       where: { id: questionId, isDeleted: false },
     });
@@ -122,24 +142,35 @@ export async function updateQuestion(req: Request, res: Response) {
       });
       return;
     }
+
     const question = await prisma.question.update({
       where: { id: questionId },
       data: {
+        questionText: check.data.questionText,
+        image: check.data.image,
+        questionType: check.data.questionType,
+        questionCategory: check.data.questionCategory,
+        paragraphText: check.data.paragraphText,
         optionA: check.data.optionA,
         optionB: check.data.optionB,
         optionC: check.data.optionC,
         optionD: check.data.optionD,
         optionE: check.data.optionE,
-        paragraphText: check.data.paragraphText,
-        question: check.data.question,
-        isDeleted: false,
-        questionType: check.data.questionType,
-        correctOption: check.data.correctOption,
-        image: check.data.image,
-        answer: check.data.answer,
-        answerImg: check.data.answerImgUrl,
+        correctOptions: check.data.correctOption,
+        explanation: check.data.explanation,
+        answerImage: check.data.answerImage,
+        tableData: check.data.tableData,
+        caseStudyData: check.data.caseStudyData,
+        blankOptions: check.data.blankOptions,
+        subQuestions: check.data.subQuestions,
+        tags: check.data.tags,
+        points: check.data.points,
+        orderIndex: check.data.orderIndex,
+        sectionId: check.data.sectionId,
+        topicId: check.data.topicId
       },
     });
+
     res.status(StatusCodes.OK).json({
       message: "Question updated successfully",
       data: question,
@@ -156,25 +187,97 @@ export async function updateQuestion(req: Request, res: Response) {
 export async function deleteQuestion(req: Request, res: Response) {
   try {
     const questionId = req.params.id;
-    console.log(questionId);
+    console.log(questionId)
     const checkQuestion = await prisma.question.findUnique({
       where: { id: questionId, isDeleted: false },
     });
-    console.log(checkQuestion);
+    console.log(checkQuestion)
     if (!checkQuestion) {
       res.status(StatusCodes.NOT_FOUND).json({ error: "Question not found" });
       return;
     }
+
     await prisma.question.update({
       where: { id: questionId },
       data: { isDeleted: true },
     });
+
     res.status(StatusCodes.OK).json({
       message: "Question deleted successfully",
     });
     return;
   } catch (error) {
     console.log(error);
+    res
+      .status(StatusCodes.INTERNAL_SERVER_ERROR)
+      .json({ error: "Internal Server Error" });
+    return;
+  }
+}
+
+// Additional helper function to get questions by category
+export async function getQuestionsByCategory(req: Request, res: Response) {
+  try {
+    const { quizId, questionCategory } = req.query;
+
+    if (!quizId || !questionCategory) {
+      res.status(StatusCodes.BAD_REQUEST).json({
+        error: "Quiz ID and question category are required"
+      });
+      return;
+    }
+
+    const questions = await prisma.question.findMany({
+      where: {
+        quizId: quizId as string,
+        questionCategory: questionCategory as any,
+        isDeleted: false,
+      },
+      orderBy: {
+        orderIndex: 'asc'
+      }
+    });
+
+    res.status(StatusCodes.OK).json({
+      message: "Questions fetched by category successfully",
+      data: questions,
+    });
+    return;
+  } catch (error) {
+    res
+      .status(StatusCodes.INTERNAL_SERVER_ERROR)
+      .json({ error: "Internal Server Error" });
+    return;
+  }
+}
+
+// Function to reorder questions
+export async function reorderQuestions(req: Request, res: Response) {
+  try {
+    const { questionOrders } = req.body; // Array of { id: string, orderIndex: number }
+
+    if (!Array.isArray(questionOrders)) {
+      res.status(StatusCodes.BAD_REQUEST).json({
+        error: "questionOrders must be an array"
+      });
+      return;
+    }
+
+    // Update order index for multiple questions
+    const updatePromises = questionOrders.map((item: { id: string, orderIndex: number }) =>
+      prisma.question.update({
+        where: { id: item.id },
+        data: { orderIndex: item.orderIndex }
+      })
+    );
+
+    await Promise.all(updatePromises);
+
+    res.status(StatusCodes.OK).json({
+      message: "Questions reordered successfully",
+    });
+    return;
+  } catch (error) {
     res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
       .json({ error: "Internal Server Error" });

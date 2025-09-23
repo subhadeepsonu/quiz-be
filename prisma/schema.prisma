@@ -12,13 +12,39 @@ enum Role {
   admin
 }
 
-enum QuizType {
-  fullLength
-  sectionWise
-  topicWise
+enum TestCategory {
+  QUANTITATIVE
+  VERBAL
+  DATA_INSIGHTS
+  MOCK_TESTS
 }
 
+enum TestSubCategory {
+  // Quantitative subcategories
+  TOPIC_WISE
+  SECTIONAL
 
+  // Verbal subcategories
+  RC_TOPIC
+  RC_LONG
+  CR_TOPIC
+  CR_LONG
+  CR_ACT
+
+  // Data Insights subcategories
+  IR_TOPIC
+  IR_SECTIONAL
+  DS
+
+  // Mock tests
+  FULL_LENGTH
+}
+
+enum TestStatus {
+  pending
+  inProgress
+  completed
+}
 
 enum SubscriptionStatus {
   active
@@ -34,78 +60,79 @@ enum SubmissionStatus {
 }
 
 model User {
-  id             String         @id @default(cuid())
-  name           String
-  email          String         @unique
-  password       String
-  role           Role           @default(user)
-  submissions    Submission[]
-  subscriptions  Subscription[]
+  id            String         @id @default(cuid())
+  name          String
+  email         String         @unique
+  password      String
+  role          Role           @default(user)
+  submissions   Submission[]
+  subscriptions Subscription[]
+  createdAt     DateTime       @default(now())
 }
 
 model Plan {
-  id          String   @id @default(cuid())
-  name        String   
-  price       Int      
-  duration    Int      
-  description String?
-  isActive    Boolean  @default(true)
+  id            String         @id @default(cuid())
+  name          String
+  price         Int
+  duration      Int
+  description   String?
+  isActive      Boolean        @default(true)
   subscriptions Subscription[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
 }
 
 model Subscription {
-  id          String              @id @default(cuid())
-  userId      String
-  user        User                @relation(fields: [userId], references: [id])
-  planId      String
-  plan        Plan                @relation(fields: [planId], references: [id])
-  status      SubscriptionStatus  @default(active)
-  startDate   DateTime            @default(now())
-  endDate     DateTime
-  createdAt   DateTime            @default(now())
-  updatedAt   DateTime            @updatedAt
-  externalPaymentId String?      
+  id                String             @id @default(cuid())
+  userId            String
+  user              User               @relation(fields: [userId], references: [id])
+  planId            String
+  plan              Plan               @relation(fields: [planId], references: [id])
+  status            SubscriptionStatus @default(active)
+  startDate         DateTime           @default(now())
+  endDate           DateTime
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  externalPaymentId String?
 }
 
 model Section {
-  id        String   @id @default(cuid())
-  name      String
-  isDeleted Boolean  @default(false)
-  Quiz Quiz[]
+  id         String    @id @default(cuid())
+  name       String
+  isDeleted  Boolean   @default(false)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  Question   Question? @relation(fields: [questionId], references: [id])
+  questionId String?
 }
 
 model Topic {
-  id        String   @id @default(cuid())
-  name      String
-  isDeleted Boolean  @default(false)
-  quiz Quiz[]
-  
+  id         String    @id @default(cuid())
+  name       String
+  isDeleted  Boolean   @default(false)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  Question   Question? @relation(fields: [questionId], references: [id])
+  questionId String?
 }
 
 model Quiz {
-  id           String         @id @default(cuid())
-  type         QuizType
-  topicId   String?
-  sectionId String?
-  title        String
-  duration     Int     
-  isDeleted Boolean @default(false)      
-  quizSections QuizSection[]
-  submissions  Submission[]
-  Topic Topic? @relation(fields: [topicId],references: [id])
-  section Section? @relation(fields: [sectionId],references: [id])
-}
+  id             String           @id @default(cuid())
+  title          String
+  description    String?
+  category       TestCategory
+  subCategory    TestSubCategory?
+  duration       Int
+  totalQuestions Int              @default(0)
+  isDeleted      Boolean          @default(false)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  questions      Question[]
+  submissions    Submission[]
 
-model QuizSection {
-  id       String   @id @default(cuid())
-  name     String
-  isCalculatorAllowed Boolean @default(false)
-  quizId   String
-  isDeleted Boolean @default(false)
-  quiz     Quiz     @relation(fields: [quizId], references: [id])
-  questions Question[]
+  @@index([category, subCategory])
+  @@index([isDeleted])
 }
-
 
 enum QuestionType {
   singleCorrect
@@ -116,55 +143,110 @@ enum QuestionType {
   tableWithOptions
   imageMultiBoolean
   caseStudy
+  dataInterpretation
+  readingComprehension
+}
+
+enum QuestionCategory {
+  quantitative
+  verbal
+  dataInsights
+  general
+}
+
+enum DifficultyLevel {
+  easy
+  medium
+  hard
 }
 
 model Question {
   id               String            @id @default(cuid())
+  questionText     String
   image            String?
   questionType     QuestionType
-  paragraphText    String?          
-  question         String
+  questionCategory QuestionCategory
+  paragraphText    String?
   optionA          String?
   optionB          String?
   optionC          String?
   optionD          String?
   optionE          String?
-  correctOption    String[]          @default([]) @db.VarChar(255)
-  quizSectionId    String
-  isDeleted        Boolean
-  answerImg        String?
-  answer           String?
-  tableData        Json?            
-  caseStudyData Json?   
-  blankOptions     Json?            
-  subQuestions     Json?            
-  quizSection      QuizSection       @relation(fields: [quizSectionId], references: [id])
+  correctOptions   String[]          @default([])
+  explanation      String?
+  answerImage      String?
+  tableData        Json?
+  caseStudyData    Json?
+  blankOptions     Json?
+  subQuestions     Json?
+  tags             String[]          @default([])
+  points           Int               @default(1)
+  quizId           String
+  isDeleted        Boolean           @default(false)
+  orderIndex       Int               @default(0)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  sectionId        String?
+  topicId          String?
+  section          Section[]
+  topic            Topic[]
+  quiz             Quiz              @relation(fields: [quizId], references: [id], onDelete: Cascade)
   submittedAnswers SubmittedAnswer[]
+
+  @@index([questionType])
+  @@index([questionCategory])
+  @@index([quizId])
+  @@index([isDeleted])
 }
 
 model Submission {
-  id          String            @id @default(cuid())
-  userId      String
-  user        User              @relation(fields: [userId], references: [id])
-  quizId      String
-  quiz        Quiz              @relation(fields: [quizId], references: [id])
-  startedAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
-  endedAt     DateTime?
-  status      SubmissionStatus  @default(inProgress)
-  score       Float?
-  answers     SubmittedAnswer[]
+  id           String           @id @default(cuid())
+  userId       String
+  quizId       String
+  startedAt    DateTime         @default(now())
+  endedAt      DateTime?
+  updatedAt    DateTime         @updatedAt
+  status       SubmissionStatus @default(inProgress)
+  totalScore   Float?
+  maxScore     Float?
+  percentage   Float?
+  timeSpentSec Int? // Total time spent in seconds
+
+  // Detailed scoring
+  correctAnswers   Int @default(0)
+  incorrectAnswers Int @default(0)
+  unansweredCount  Int @default(0)
+  flaggedCount     Int @default(0)
+
+  // Relations
+  user    User              @relation(fields: [userId], references: [id])
+  quiz    Quiz              @relation(fields: [quizId], references: [id])
+  answers SubmittedAnswer[]
+
+  @@index([userId])
+  @@index([quizId])
+  @@index([status])
+  @@index([startedAt])
 }
 
 model SubmittedAnswer {
-  id              String       @id @default(cuid())
+  id              String   @id @default(cuid())
   submissionId    String
-  submission      Submission   @relation(fields: [submissionId], references: [id])
   questionId      String
-  question        Question     @relation(fields: [questionId], references: [id])
-  selectedOption  String[]     @default([]) @db.VarChar(255)
-  isCorrect       Boolean?    
-  answeredAt      DateTime     @default(now())
-  flagged         Boolean      @default(false)
-  timeTakenSec    Int?        
+  selectedOptions String[] @default([])
+  isCorrect       Boolean?
+  points          Float    @default(0)
+  answeredAt      DateTime @default(now())
+  flagged         Boolean  @default(false)
+  timeTakenSec    Int?
+  visited         Boolean  @default(false)
+
+  // Relations
+  submission Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  question   Question   @relation(fields: [questionId], references: [id])
+
+  @@unique([submissionId, questionId])
+  @@index([submissionId])
+  @@index([questionId])
+  @@index([isCorrect])
 }

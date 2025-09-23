@@ -28,7 +28,6 @@ export async function getSectionById(req: Request, res: Response) {
     const sectionId = req.params.id;
     const section = await prisma.section.findUnique({
       where: { id: sectionId, isDeleted: false },
-      include: {},
     });
     if (!section) {
       res.status(StatusCodes.NOT_FOUND).json({ error: "Section not found" });

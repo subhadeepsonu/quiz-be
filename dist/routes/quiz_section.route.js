@@ -1,0 +1,12 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.quiz_sectionRouter = void 0;
+const express_1 = require("express");
+const quiz_section_controller_1 = require("../controllers/quiz_section.controller");
+const middleware_1 = require("../middleware/middleware");
+exports.quiz_sectionRouter = (0, express_1.Router)();
+exports.quiz_sectionRouter.get("/", (0, middleware_1.middleware)(["admin", "user"]), quiz_section_controller_1.getAllQuiz_section);
+exports.quiz_sectionRouter.get("/:id", (0, middleware_1.middleware)(["admin", "user"]), quiz_section_controller_1.getQuiz_section);
+exports.quiz_sectionRouter.post("/", (0, middleware_1.middleware)(["admin"]), quiz_section_controller_1.createQuiz_section);
+exports.quiz_sectionRouter.put("/:id", (0, middleware_1.middleware)(["admin"]), quiz_section_controller_1.updateQuiz_section);
+exports.quiz_sectionRouter.delete("/:id", (0, middleware_1.middleware)(["admin"]), quiz_section_controller_1.deleteQuiz_section);

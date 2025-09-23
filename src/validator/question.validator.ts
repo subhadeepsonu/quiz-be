@@ -1,7 +1,8 @@
-import { QuestionType } from "@prisma/client";
+import { QuestionType, QuestionCategory } from "@prisma/client";
 import { z } from "zod";
 
 export const QuestionTypeEnum = z.nativeEnum(QuestionType);
+export const QuestionCategoryEnum = z.nativeEnum(QuestionCategory);
 const CorrectOptionEnum = z.enum(["A", "B", "C", "D", "E"]);
 
 // Schema for blank options (fill-in-blank questions)
@@ -37,6 +38,7 @@ const CaseStudyDataSchema = z.object({
   sections: z.array(CaseStudySectionSchema).min(1),
   questions: z.array(CaseStudyQuestionSchema).min(1),
 });
+
 // Schema for table data
 const TableDataSchema = z.object({
   columns: z.array(z.string()).min(1, "At least one column is required"),
@@ -53,26 +55,33 @@ const SubQuestionSchema = z.object({
 
 export const QuestionSchema = z
   .object({
+    // Updated field names to match Prisma schema
+    questionText: z.string().min(1, "Question text is required"),
     image: z.string().optional(),
     questionType: QuestionTypeEnum,
-    question: z.string().min(1, "Question is required"),
+    questionCategory: QuestionCategoryEnum,
     paragraphText: z.string().optional(),
     optionA: z.string().optional(),
     optionB: z.string().optional(),
     optionC: z.string().optional(),
     optionD: z.string().optional(),
     optionE: z.string().optional(),
+    sectionId: z.string().optional(),
+    topicId: z.string().optional(),
     correctOption: z.array(CorrectOptionEnum).optional(),
-    booleanAnswer: z.boolean().optional(),
-    quizSectionId: z.string().cuid(),
-    answerImgUrl: z.string().optional(),
-    answer: z.string(),
-    caseStudyData: CaseStudyDataSchema.optional(),
-
-    // New fields for extended question types
-    blankOptions: z.record(z.string(), BlankOptionSchema).optional(),
+    explanation: z.string().optional(),
+    answerImage: z.string().optional(),
     tableData: TableDataSchema.optional(),
+    caseStudyData: CaseStudyDataSchema.optional(),
+    blankOptions: z.record(z.string(), BlankOptionSchema).optional(),
     subQuestions: z.array(SubQuestionSchema).optional(),
+    tags: z.array(z.string()).default([]),
+    points: z.number().int().positive().default(1),
+    quizId: z.string().cuid("Invalid quiz ID format"),
+    orderIndex: z.number().int().min(0).default(0),
+
+    // Boolean answer for Boolean type questions
+    booleanAnswer: z.boolean().optional(),
   })
   .superRefine((data, ctx) => {
     const isParagraph = data.questionType === "paragraph";
@@ -92,6 +101,7 @@ export const QuestionSchema = z
       "paragraph",
       "tableWithOptions",
     ].includes(data.questionType);
+
     if (isCaseStudy) {
       if (!data.caseStudyData) {
         ctx.addIssue({
@@ -101,6 +111,7 @@ export const QuestionSchema = z
         });
       }
     }
+
     // Boolean question validation
     if (isBoolean) {
       if (data.booleanAnswer === undefined) {
@@ -241,9 +252,8 @@ export const QuestionSchema = z
             if (row.length !== columnCount) {
               ctx.addIssue({
                 code: z.ZodIssueCode.custom,
-                message: `Row ${index + 1} has ${
-                  row.length
-                } cells but table has ${columnCount} columns.`,
+                message: `Row ${index + 1} has ${row.length
+                  } cells but table has ${columnCount} columns.`,
                 path: ["tableData", "rows", index],
               });
             }
@@ -411,12 +421,21 @@ export const QuestionSchema = z
     }
   });
 
+// Create schema variant for updates (makes more fields optional)
+export const UpdateQuestionSchema = QuestionSchema
+
 // Export the schema type for TypeScript
 export type QuestionSchemaType = z.infer<typeof QuestionSchema>;
+export type UpdateQuestionSchemaType = z.infer<typeof UpdateQuestionSchema>;
 
 // Utility function to validate question data
 export const validateQuestion = (data: unknown) => {
   return QuestionSchema.safeParse(data);
+};
+
+// Utility function to validate question update data
+export const validateUpdateQuestion = (data: unknown) => {
+  return UpdateQuestionSchema.safeParse(data);
 };
 
 // Type guards for runtime checking
@@ -442,5 +461,22 @@ export const requiresSpecialData = (questionType: string): boolean => {
     "fillInBlankDropdown",
     "tableWithOptions",
     "imageMultiBoolean",
+    "caseStudy",
   ].includes(questionType);
+};
+
+// Helper function to get default question data based on type
+export const getDefaultQuestionData = (
+  questionType: QuestionType,
+  questionCategory: QuestionCategory,
+  quizId: string
+): Partial<QuestionSchemaType> => {
+  return {
+    questionType,
+    questionCategory,
+    quizId,
+    tags: [],
+    points: 1,
+    orderIndex: 0,
+  };
 };
