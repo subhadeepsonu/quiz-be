@@ -59,7 +59,9 @@ exports.QuestionSchema = zod_1.z
     optionC: zod_1.z.string().optional(),
     optionD: zod_1.z.string().optional(),
     optionE: zod_1.z.string().optional(),
-    correctOptions: zod_1.z.array(CorrectOptionEnum).optional(),
+    sectionId: zod_1.z.string().optional(),
+    topicId: zod_1.z.string().optional(),
+    correctOption: zod_1.z.array(CorrectOptionEnum).optional(),
     explanation: zod_1.z.string().optional(),
     answerImage: zod_1.z.string().optional(),
     tableData: TableDataSchema.optional(),
@@ -76,7 +78,7 @@ exports.QuestionSchema = zod_1.z
     .superRefine((data, ctx) => {
     const isParagraph = data.questionType === "paragraph";
     const isCaseStudy = data.questionType === "caseStudy";
-    const isBoolean = data.questionType === "boolean";
+    const isBoolean = data.questionType === "Boolean";
     const isSingleCorrect = data.questionType === "singleCorrect" || isParagraph;
     const isMultipleCorrect = data.questionType === "multipleCorrect";
     const isFillInBlank = data.questionType === "fillInBlankDropdown";
@@ -120,11 +122,11 @@ exports.QuestionSchema = zod_1.z
                 path: [],
             });
         }
-        if (data.correctOptions && data.correctOptions.length > 0) {
+        if (data.correctOption && data.correctOption.length > 0) {
             ctx.addIssue({
                 code: zod_1.z.ZodIssueCode.custom,
-                message: "Use 'booleanAnswer' instead of 'correctOptions' for Boolean questions.",
-                path: ["correctOptions"],
+                message: "Use 'booleanAnswer' instead of 'correctOption' for Boolean questions.",
+                path: ["correctOption"],
             });
         }
     }
@@ -279,43 +281,43 @@ exports.QuestionSchema = zod_1.z
                 path: [],
             });
         }
-        // Validate correctOptions
-        if (!data.correctOptions || data.correctOptions.length === 0) {
+        // Validate correctOption
+        if (!data.correctOption || data.correctOption.length === 0) {
             ctx.addIssue({
                 code: zod_1.z.ZodIssueCode.custom,
                 message: "At least one correct option is required.",
-                path: ["correctOptions"],
+                path: ["correctOption"],
             });
         }
         // Single correct validation
         if (isSingleCorrect &&
-            data.correctOptions &&
-            data.correctOptions.length !== 1) {
+            data.correctOption &&
+            data.correctOption.length !== 1) {
             ctx.addIssue({
                 code: zod_1.z.ZodIssueCode.custom,
                 message: "Exactly one correct option is required for single correct/paragraph questions.",
-                path: ["correctOptions"],
+                path: ["correctOption"],
             });
         }
         // Multiple correct validation
         if (isMultipleCorrect &&
-            data.correctOptions &&
-            data.correctOptions.length < 2) {
+            data.correctOption &&
+            data.correctOption.length < 2) {
             ctx.addIssue({
                 code: zod_1.z.ZodIssueCode.custom,
                 message: "At least two correct options are required for multiple correct questions.",
-                path: ["correctOptions"],
+                path: ["correctOption"],
             });
         }
-        // Validate that correctOptions values exist in the options
-        if (data.correctOptions && data.correctOptions.length > 0) {
+        // Validate that correctOption values exist in the options
+        if (data.correctOption && data.correctOption.length > 0) {
             const availableOptions = ["A", "B", "C", "D", "E"].filter((opt) => data[`option${opt}`]);
-            const invalidOptions = data.correctOptions.filter((opt) => !availableOptions.includes(opt));
+            const invalidOptions = data.correctOption.filter((opt) => !availableOptions.includes(opt));
             if (invalidOptions.length > 0) {
                 ctx.addIssue({
                     code: zod_1.z.ZodIssueCode.custom,
                     message: `Correct options reference non-existent options: ${invalidOptions.join(", ")}`,
-                    path: ["correctOptions"],
+                    path: ["correctOption"],
                 });
             }
         }

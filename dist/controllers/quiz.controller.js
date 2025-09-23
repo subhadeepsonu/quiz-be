@@ -22,6 +22,7 @@ function getAllQuiz(req, res) {
         try {
             const category = req.query.category;
             const subCategory = req.query.subCategory;
+            console.log(category, subCategory);
             const quizzes = yield db_1.prisma.quiz.findMany({
                 where: Object.assign(Object.assign(Object.assign({}, (category && { category })), (subCategory && { subCategory })), { isDeleted: false }),
                 include: {
@@ -35,6 +36,7 @@ function getAllQuiz(req, res) {
             return;
         }
         catch (error) {
+            console.log(error);
             res
                 .status(http_status_codes_1.StatusCodes.INTERNAL_SERVER_ERROR)
                 .json({ error: "Internal Server Error" });
@@ -49,7 +51,11 @@ function getQuiz(req, res) {
             const quiz = yield db_1.prisma.quiz.findUnique({
                 where: { id: quizId, isDeleted: false },
                 include: {
-                    questions: true,
+                    questions: {
+                        where: {
+                            isDeleted: false
+                        }
+                    },
                 },
             });
             if (!quiz) {

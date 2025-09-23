@@ -16,8 +16,11 @@ exports.QuizValidator = zod_1.default
     totalQuestions: zod_1.default.coerce.number().int().min(0, "Total questions cannot be negative").optional(),
 })
     .superRefine((data, ctx) => {
-    if (data.category === "quantitative" && data.subCategory) {
-        const validQuantSubCategories = ["topicWise", "sectional"];
+    if (data.category === client_1.TestCategory.QUANTITATIVE && data.subCategory) {
+        const validQuantSubCategories = [
+            client_1.TestSubCategory.TOPIC_WISE,
+            client_1.TestSubCategory.SECTIONAL,
+        ];
         if (!validQuantSubCategories.includes(data.subCategory)) {
             ctx.addIssue({
                 path: ["subCategory"],
@@ -26,11 +29,13 @@ exports.QuizValidator = zod_1.default
             });
         }
     }
-    if (data.category === "verbal" && data.subCategory) {
+    if (data.category === client_1.TestCategory.VERBAL && data.subCategory) {
         const validVerbalSubCategories = [
-            "readingComprehension", "criticalReasoning", "rcTopicWise",
-            "rcLongSittings", "crTopicWise", "crLongSittings",
-            "crActLongSittings", "verbalSectional"
+            client_1.TestSubCategory.RC_TOPIC,
+            client_1.TestSubCategory.RC_LONG,
+            client_1.TestSubCategory.CR_TOPIC,
+            client_1.TestSubCategory.CR_LONG,
+            client_1.TestSubCategory.CR_ACT,
         ];
         if (!validVerbalSubCategories.includes(data.subCategory)) {
             ctx.addIssue({
@@ -40,10 +45,11 @@ exports.QuizValidator = zod_1.default
             });
         }
     }
-    if (data.category === "dataInsights" && data.subCategory) {
+    if (data.category === client_1.TestCategory.DATA_INSIGHTS && data.subCategory) {
         const validDataInsightsSubCategories = [
-            "integratedReasoning", "dataSufficiency", "irTopicWise",
-            "irSectional", "dsSectional", "dataInsightsSectional"
+            client_1.TestSubCategory.IR_TOPIC,
+            client_1.TestSubCategory.IR_SECTIONAL,
+            client_1.TestSubCategory.DS,
         ];
         if (!validDataInsightsSubCategories.includes(data.subCategory)) {
             ctx.addIssue({
@@ -52,12 +58,5 @@ exports.QuizValidator = zod_1.default
                 message: "Invalid subcategory for data insights tests",
             });
         }
-    }
-    if (data.category === "mockTests" && data.subCategory) {
-        ctx.addIssue({
-            path: ["subCategory"],
-            code: zod_1.default.ZodIssueCode.custom,
-            message: "Mock tests should not have subcategories",
-        });
     }
 });

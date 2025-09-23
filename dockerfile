@@ -8,10 +8,8 @@ RUN npm install
 
 RUN npx prisma generate
 
-RUN npx prisma db push 
-
 RUN npm install -g typescript
- 
+
 RUN pwd
 
 RUN npx tsc

@@ -106,7 +106,7 @@ function createQuestion(req, res) {
                     optionC: check.data.optionC,
                     optionD: check.data.optionD,
                     optionE: check.data.optionE,
-                    correctOptions: check.data.correctOptions,
+                    correctOptions: check.data.correctOption,
                     explanation: check.data.explanation,
                     answerImage: check.data.answerImage,
                     tableData: check.data.tableData,
@@ -118,6 +118,8 @@ function createQuestion(req, res) {
                     quizId: check.data.quizId,
                     orderIndex: check.data.orderIndex || 0,
                     isDeleted: false,
+                    sectionId: check.data.sectionId,
+                    topicId: check.data.topicId
                 },
             });
             res.status(http_status_codes_1.StatusCodes.CREATED).json({
@@ -169,7 +171,7 @@ function updateQuestion(req, res) {
                     optionC: check.data.optionC,
                     optionD: check.data.optionD,
                     optionE: check.data.optionE,
-                    correctOptions: check.data.correctOptions,
+                    correctOptions: check.data.correctOption,
                     explanation: check.data.explanation,
                     answerImage: check.data.answerImage,
                     tableData: check.data.tableData,
@@ -179,6 +181,8 @@ function updateQuestion(req, res) {
                     tags: check.data.tags,
                     points: check.data.points,
                     orderIndex: check.data.orderIndex,
+                    sectionId: check.data.sectionId,
+                    topicId: check.data.topicId
                 },
             });
             res.status(http_status_codes_1.StatusCodes.OK).json({
@@ -199,9 +203,11 @@ function deleteQuestion(req, res) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
             const questionId = req.params.id;
+            console.log(questionId);
             const checkQuestion = yield db_1.prisma.question.findUnique({
                 where: { id: questionId, isDeleted: false },
             });
+            console.log(checkQuestion);
             if (!checkQuestion) {
                 res.status(http_status_codes_1.StatusCodes.NOT_FOUND).json({ error: "Question not found" });
                 return;
