@@ -40,6 +40,46 @@ enum TestSubCategory {
   FULL_LENGTH
 }
 
+enum SectionEnum {
+  VERBAL_REASONING
+  QUANTITATIVE_REASONING
+  DATA_INSIGHTS
+  INTEGRATED_REASONING
+}
+
+enum TopicEnum {
+  // Verbal Reasoning
+  READING_COMPREHENSION
+  STRENGTH
+  WEAKEN
+  FLAW
+  PARADOX
+  INFERENCE
+  ASSUMPTIONS
+
+  // Quantitative Reasoning
+  ARITHMETIC
+  COORDINATE_GEOMETRY
+  PROBABILITY
+  PERMUTATION_COMBINATION
+  ALGEBRA
+  NUMBER_PROPERTIES
+  MODS_INEQUALITIES
+  STATISTICS
+  GENERAL_WORD_PROBLEMS
+
+  // Data Insights
+  DATA_SUFFICIENCY
+  MATH_RELATED
+  NON_MATH_RELATED
+
+  // Integrated Reasoning
+  GRAPHICAL_INTERPRETATION
+  TABLE_ANALYSIS
+  MULTI_SOURCE_REASONING
+  TWO_PART_ANALYSTS
+}
+
 enum TestStatus {
   pending
   inProgress
@@ -165,7 +205,8 @@ model Question {
   questionText     String
   image            String?
   questionType     QuestionType
-  questionCategory QuestionCategory
+  questionSection  SectionEnum?
+  questionTopic    TopicEnum?
   paragraphText    String?
   optionA          String?
   optionB          String?
@@ -179,7 +220,6 @@ model Question {
   caseStudyData    Json?
   blankOptions     Json?
   subQuestions     Json?
-  tags             String[]          @default([])
   points           Int               @default(1)
   quizId           String
   isDeleted        Boolean           @default(false)
@@ -194,7 +234,6 @@ model Question {
   submittedAnswers SubmittedAnswer[]
 
   @@index([questionType])
-  @@index([questionCategory])
   @@index([quizId])
   @@index([isDeleted])
 }

@@ -83,7 +83,8 @@ export async function createQuestion(req: Request, res: Response) {
         questionText: check.data.questionText,
         image: check.data.image,
         questionType: check.data.questionType,
-        questionCategory: check.data.questionCategory,
+        questionSection: check.data.questionSection,
+        questionTopic: check.data.questionTopic,
         paragraphText: check.data.paragraphText,
         optionA: check.data.optionA,
         optionB: check.data.optionB,
@@ -97,7 +98,6 @@ export async function createQuestion(req: Request, res: Response) {
         caseStudyData: check.data.caseStudyData,
         blankOptions: check.data.blankOptions,
         subQuestions: check.data.subQuestions,
-        tags: check.data.tags,
         points: check.data.points || 1,
         quizId: check.data.quizId,
         orderIndex: check.data.orderIndex || 0,
@@ -149,7 +149,8 @@ export async function updateQuestion(req: Request, res: Response) {
         questionText: check.data.questionText,
         image: check.data.image,
         questionType: check.data.questionType,
-        questionCategory: check.data.questionCategory,
+        questionSection: check.data.questionSection,
+        questionTopic: check.data.questionTopic,
         paragraphText: check.data.paragraphText,
         optionA: check.data.optionA,
         optionB: check.data.optionB,
@@ -163,7 +164,6 @@ export async function updateQuestion(req: Request, res: Response) {
         caseStudyData: check.data.caseStudyData,
         blankOptions: check.data.blankOptions,
         subQuestions: check.data.subQuestions,
-        tags: check.data.tags,
         points: check.data.points,
         orderIndex: check.data.orderIndex,
         sectionId: check.data.sectionId,
@@ -230,7 +230,6 @@ export async function getQuestionsByCategory(req: Request, res: Response) {
     const questions = await prisma.question.findMany({
       where: {
         quizId: quizId as string,
-        questionCategory: questionCategory as any,
         isDeleted: false,
       },
       orderBy: {

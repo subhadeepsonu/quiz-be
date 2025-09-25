@@ -1,8 +1,10 @@
-import { QuestionType, QuestionCategory } from "@prisma/client";
+import { QuestionType, QuestionCategory, SectionEnum, TopicEnum } from "@prisma/client";
 import { z } from "zod";
 
 export const QuestionTypeEnum = z.nativeEnum(QuestionType);
 export const QuestionCategoryEnum = z.nativeEnum(QuestionCategory);
+export const SectionEnumSchema = z.nativeEnum(SectionEnum);
+export const TopicEnumSchema = z.nativeEnum(TopicEnum);
 const CorrectOptionEnum = z.enum(["A", "B", "C", "D", "E"]);
 
 // Schema for blank options (fill-in-blank questions)
@@ -60,6 +62,11 @@ export const QuestionSchema = z
     image: z.string().optional(),
     questionType: QuestionTypeEnum,
     questionCategory: QuestionCategoryEnum,
+
+    // Mock test specific fields - optional for all question types
+    questionSection: SectionEnumSchema.optional(),
+    questionTopic: TopicEnumSchema.optional(),
+
     paragraphText: z.string().optional(),
     optionA: z.string().optional(),
     optionB: z.string().optional(),
@@ -82,17 +89,43 @@ export const QuestionSchema = z
 
     // Boolean answer for Boolean type questions
     booleanAnswer: z.boolean().optional(),
+
+    // Quiz category for validation context
+    quizCategory: z.enum(["QUANTITATIVE", "VERBAL", "DATA_INSIGHTS", "MOCK_TESTS"]).optional(),
   })
   .superRefine((data, ctx) => {
     const isParagraph = data.questionType === "paragraph";
     const isCaseStudy = data.questionType === "caseStudy";
     const isBoolean = data.questionType === "Boolean";
-    const isSingleCorrect =
-      data.questionType === "singleCorrect" || isParagraph;
+    const isSingleCorrect = data.questionType === "singleCorrect" || isParagraph;
     const isMultipleCorrect = data.questionType === "multipleCorrect";
     const isFillInBlank = data.questionType === "fillInBlankDropdown";
     const isTableWithOptions = data.questionType === "tableWithOptions";
     const isImageMultiBoolean = data.questionType === "imageMultiBoolean";
+    const isMockTest = data.quizCategory === "MOCK_TESTS";
+
+    // Mock test validation - questionSection and questionTopic should only be present for mock tests
+    if (isMockTest) {
+      // For mock tests, we might want to encourage (but not require) section and topic classification
+      // This is flexible based on your business requirements
+    } else {
+      // For non-mock tests, these fields should not be present
+      if (data.questionSection) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "questionSection should only be provided for mock test questions.",
+          path: ["questionSection"],
+        });
+      }
+
+      if (data.questionTopic) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "questionTopic should only be provided for mock test questions.",
+          path: ["questionTopic"],
+        });
+      }
+    }
 
     // Standard option-based questions that need A-E options
     const needsStandardOptions = [
@@ -465,16 +498,22 @@ export const requiresSpecialData = (questionType: string): boolean => {
   ].includes(questionType);
 };
 
+export const isMockTestQuestion = (quizCategory: string): boolean => {
+  return quizCategory === "MOCK_TESTS";
+};
+
 // Helper function to get default question data based on type
 export const getDefaultQuestionData = (
   questionType: QuestionType,
   questionCategory: QuestionCategory,
-  quizId: string
+  quizId: string,
+  quizCategory?: string
 ): Partial<QuestionSchemaType> => {
   return {
     questionType,
     questionCategory,
     quizId,
+    quizCategory: quizCategory as any,
     tags: [],
     points: 1,
     orderIndex: 0,

@@ -44,7 +44,7 @@ jobs:
             # Stop and remove any existing container with the same name
             sudo docker stop quiz-be || true
             sudo docker rm quiz-be || true
-
+            sudo docker image prune
             # Pull the latest image
             sudo docker pull subhadeepthandaka/quiz-be:${{ github.ref_name }}
 
