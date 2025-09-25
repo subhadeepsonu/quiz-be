@@ -102,30 +102,9 @@ export const QuestionSchema = z
     const isFillInBlank = data.questionType === "fillInBlankDropdown";
     const isTableWithOptions = data.questionType === "tableWithOptions";
     const isImageMultiBoolean = data.questionType === "imageMultiBoolean";
-    const isMockTest = data.quizCategory === "MOCK_TESTS";
 
-    // Mock test validation - questionSection and questionTopic should only be present for mock tests
-    if (isMockTest) {
-      // For mock tests, we might want to encourage (but not require) section and topic classification
-      // This is flexible based on your business requirements
-    } else {
-      // For non-mock tests, these fields should not be present
-      if (data.questionSection) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "questionSection should only be provided for mock test questions.",
-          path: ["questionSection"],
-        });
-      }
 
-      if (data.questionTopic) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "questionTopic should only be provided for mock test questions.",
-          path: ["questionTopic"],
-        });
-      }
-    }
+
 
     // Standard option-based questions that need A-E options
     const needsStandardOptions = [
@@ -498,9 +477,6 @@ export const requiresSpecialData = (questionType: string): boolean => {
   ].includes(questionType);
 };
 
-export const isMockTestQuestion = (quizCategory: string): boolean => {
-  return quizCategory === "MOCK_TESTS";
-};
 
 // Helper function to get default question data based on type
 export const getDefaultQuestionData = (
