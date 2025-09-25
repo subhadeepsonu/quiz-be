@@ -22,6 +22,7 @@ const CaseStudyQuestionSchema = z.object({
   question: z.string().min(1, "Case study question text is required"),
   type: z.enum(["singleCorrect", "multipleCorrect", "Boolean", "multiBoolean"]),
   options: z.array(z.string()).optional(),
+  imageUrl: z.string(),
   correctOption: z.array(CorrectOptionEnum).optional(),
   booleanAnswer: z.boolean().optional(),
   subQuestions: z
