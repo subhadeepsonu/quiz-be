@@ -32,6 +32,7 @@ export const QuizValidator = z
         TestSubCategory.CR_TOPIC,
         TestSubCategory.CR_LONG,
         TestSubCategory.CR_ACT,
+        TestSubCategory.SECTIONAL,
       ];
       if (!validVerbalSubCategories.includes(data.subCategory)) {
         ctx.addIssue({
@@ -47,6 +48,7 @@ export const QuizValidator = z
         TestSubCategory.IR_TOPIC,
         TestSubCategory.IR_SECTIONAL,
         TestSubCategory.DS,
+        TestSubCategory.SECTIONAL,
       ];
       if (!validDataInsightsSubCategories.includes(data.subCategory)) {
         ctx.addIssue({
