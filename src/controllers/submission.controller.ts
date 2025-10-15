@@ -1,15 +1,21 @@
 import { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
 import { prisma } from "../db";
+import { AuthenticatedRequest } from "../middleware/middleware";
 
-export async function startSubmission(req: Request, res: Response) {
+export async function startSubmission(
+  req: AuthenticatedRequest,
+  res: Response
+) {
   try {
-    const { userId, quizId } = req.body;
+    const { quizId } = req.body;
+    const userId = req.userId;
 
     if (!userId || !quizId) {
       res
         .status(StatusCodes.BAD_REQUEST)
         .json({ error: "userId and quizId are required" });
+      return;
     }
 
     const submission = await prisma.submission.create({
