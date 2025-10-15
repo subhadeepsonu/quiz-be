@@ -7,7 +7,7 @@ import {
 
 export const answerRouter = Router();
 
-answerRouter.post("/", middleware(["user"]), saveAnswer);
+answerRouter.post("/", middleware(["user", "admin"]), saveAnswer);
 answerRouter.get(
   "/:submissionId",
   middleware(["user", "admin"]),

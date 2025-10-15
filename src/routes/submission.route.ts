@@ -18,6 +18,10 @@ submissionRouter.get(
   getUserSubmissions
 );
 submissionRouter.get("/:id", middleware(["user", "admin"]), getSubmission);
-submissionRouter.post("/", middleware(["user"]), startSubmission);
-submissionRouter.put("/:id/complete", middleware(["user"]), completeSubmission);
+submissionRouter.post("/", middleware(["user", "admin"]), startSubmission);
+submissionRouter.put(
+  "/:id/complete",
+  middleware(["user", "admin"]),
+  completeSubmission
+);
 submissionRouter.delete("/:id", middleware(["admin"]), deleteSubmission);
