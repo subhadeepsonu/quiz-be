@@ -1,57 +1,123 @@
 import { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
+import { prisma } from "../db";
 
-export async function getAllSubmission(req: Request, res: Response) {
+export async function startSubmission(req: Request, res: Response) {
   try {
-    // TODO: implement logic
+    const { userId, quizId } = req.body;
+
+    if (!userId || !quizId) {
+      res
+        .status(StatusCodes.BAD_REQUEST)
+        .json({ error: "userId and quizId are required" });
+    }
+
+    const submission = await prisma.submission.create({
+      data: {
+        userId,
+        quizId,
+        status: "inProgress",
+      },
+    });
+
+    res.status(StatusCodes.CREATED).json(submission);
+  } catch (error) {
+    console.error(error);
+    res
+      .status(StatusCodes.INTERNAL_SERVER_ERROR)
+      .json({ error: "Failed to create submission" });
+  }
+}
+
+export async function getAllSubmissions(req: Request, res: Response) {
+  try {
+    const submissions = await prisma.submission.findMany({
+      orderBy: { startedAt: "desc" },
+      include: { user: true, quiz: true },
+    });
+    res.json(submissions);
   } catch (error) {
     res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
-      .json({ error: "Internal Server Error" });
-    return;
+      .json({ error: "Failed to fetch submissions" });
+  }
+}
+
+export async function getUserSubmissions(req: Request, res: Response) {
+  try {
+    const { userId } = req.params;
+    const { quizId, limit } = req.query;
+
+    const whereClause: any = { userId };
+    if (quizId) whereClause.quizId = quizId;
+
+    const submissions = await prisma.submission.findMany({
+      where: whereClause,
+      orderBy: { startedAt: "desc" },
+      take: limit ? Number(limit) : undefined,
+      include: { quiz: true },
+    });
+
+    res.json(submissions);
+  } catch (error) {
+    console.error(error);
+    res
+      .status(StatusCodes.INTERNAL_SERVER_ERROR)
+      .json({ error: "Failed to fetch user submissions" });
   }
 }
 
 export async function getSubmission(req: Request, res: Response) {
   try {
-    // TODO: implement logic
+    const { id } = req.params;
+    const submission = await prisma.submission.findUnique({
+      where: { id },
+      include: {
+        quiz: true,
+        answers: { include: { question: true } },
+      },
+    });
+
+    if (!submission)
+      res.status(StatusCodes.NOT_FOUND).json({ error: "Submission not found" });
+
+    res.json(submission);
   } catch (error) {
     res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
-      .json({ error: "Internal Server Error" });
-    return;
+      .json({ error: "Failed to fetch submission" });
   }
 }
 
-export async function createSubmission(req: Request, res: Response) {
+export async function completeSubmission(req: Request, res: Response) {
   try {
-    // TODO: implement logic
-  } catch (error) {
-    res
-      .status(StatusCodes.INTERNAL_SERVER_ERROR)
-      .json({ error: "Internal Server Error" });
-    return;
-  }
-}
+    const { id } = req.params;
 
-export async function updateSubmission(req: Request, res: Response) {
-  try {
-    // TODO: implement logic
+    const updated = await prisma.submission.update({
+      where: { id },
+      data: {
+        status: "completed",
+        endedAt: new Date(),
+      },
+    });
+
+    res.json(updated);
   } catch (error) {
+    console.error(error);
     res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
-      .json({ error: "Internal Server Error" });
-    return;
+      .json({ error: "Failed to complete submission" });
   }
 }
 
 export async function deleteSubmission(req: Request, res: Response) {
   try {
-    // TODO: implement logic
+    const { id } = req.params;
+    await prisma.submission.delete({ where: { id } });
+    res.status(StatusCodes.NO_CONTENT).send();
   } catch (error) {
     res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
-      .json({ error: "Internal Server Error" });
-    return;
+      .json({ error: "Failed to delete submission" });
   }
 }

@@ -1,16 +1,23 @@
 import { Router } from "express";
 import {
-  getAllSubmission,
+  getAllSubmissions,
+  getUserSubmissions,
   getSubmission,
-  createSubmission,
-  updateSubmission,
+  startSubmission,
+  completeSubmission,
   deleteSubmission,
 } from "../controllers/submission.controller";
 import { middleware } from "../middleware/middleware";
+
 export const submissionRouter = Router();
 
-submissionRouter.get("/", middleware(["user", "admin"]), getAllSubmission);
-submissionRouter.get("/:id", getSubmission);
-submissionRouter.post("/", createSubmission);
-submissionRouter.put("/:id", updateSubmission);
-submissionRouter.delete("/:id", deleteSubmission);
+submissionRouter.get("/", middleware(["admin"]), getAllSubmissions);
+submissionRouter.get(
+  "/user/:userId",
+  middleware(["user", "admin"]),
+  getUserSubmissions
+);
+submissionRouter.get("/:id", middleware(["user", "admin"]), getSubmission);
+submissionRouter.post("/", middleware(["user"]), startSubmission);
+submissionRouter.put("/:id/complete", middleware(["user"]), completeSubmission);
+submissionRouter.delete("/:id", middleware(["admin"]), deleteSubmission);
