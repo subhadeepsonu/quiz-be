@@ -9,6 +9,7 @@ import { submissionRouter } from "./routes/submission.route";
 import { topicRouter } from "./routes/topic.route";
 import { authRouter } from "./routes/auth.route";
 import { uploadRouter } from "./routes/upload.route";
+import { answerRouter } from "./routes/answer.routes";
 const app = express();
 app.use(express.json());
 app.use(cors());
@@ -26,6 +27,7 @@ app.use("/question", questionRouter);
 app.use("/quiz", quizRouter);
 app.use("/section", sectionRouter);
 app.use("/submission", submissionRouter);
+app.use("/answer", answerRouter);
 app.use("/topic", topicRouter);
 app.use("/upload", uploadRouter);
 
