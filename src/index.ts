@@ -12,14 +12,15 @@ import { uploadRouter } from "./routes/upload.route";
 import { answerRouter } from "./routes/answer.routes";
 const app = express();
 app.use(express.json());
+
 app.use(
   cors({
-    origin: (origin, callback) => {
-      callback(null, true);
-    },
+    origin: true, // simpler shorthand for all origins
     credentials: true,
   })
 );
+
+app.options("*", cors());
 
 app.get("/", (req, res) => {
   res.json({
