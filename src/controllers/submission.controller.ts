@@ -85,6 +85,7 @@ export async function getSubmissionByQuiz(
       res.status(StatusCodes.UNAUTHORIZED).json({
         error: "Unauthorized: User not found in token",
       });
+      return;
     }
 
     const submission = await prisma.submission.findFirst({
@@ -93,9 +94,7 @@ export async function getSubmissionByQuiz(
         quizId,
         status: "completed",
       },
-      orderBy: {
-        startedAt: "desc",
-      },
+      orderBy: { startedAt: "desc" },
       include: {
         quiz: true,
         answers: { include: { question: true } },
@@ -106,6 +105,7 @@ export async function getSubmissionByQuiz(
       res.status(StatusCodes.NOT_FOUND).json({
         error: "No submission found for this quiz",
       });
+      return;
     }
 
     res.json(submission);
