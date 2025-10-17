@@ -11,19 +11,8 @@ import { authRouter } from "./routes/auth.route";
 import { uploadRouter } from "./routes/upload.route";
 import { answerRouter } from "./routes/answer.routes";
 const app = express();
-
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      callback(null, true); // allow all dynamically
-    },
-    credentials: true,
-  })
-);
-
-app.options("*", cors()); // handle preflight for all routes
-
 app.use(express.json());
+app.use(cors());
 
 app.get("/", (req, res) => {
   res.json({
