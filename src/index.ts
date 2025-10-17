@@ -11,16 +11,19 @@ import { authRouter } from "./routes/auth.route";
 import { uploadRouter } from "./routes/upload.route";
 import { answerRouter } from "./routes/answer.routes";
 const app = express();
-app.use(express.json());
 
 app.use(
   cors({
-    origin: true, // simpler shorthand for all origins
+    origin: (origin, callback) => {
+      callback(null, true); // allow all dynamically
+    },
     credentials: true,
   })
 );
 
-app.options("*", cors());
+app.options("*", cors()); // handle preflight for all routes
+
+app.use(express.json());
 
 app.get("/", (req, res) => {
   res.json({
