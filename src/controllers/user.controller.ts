@@ -5,6 +5,7 @@ import { Role } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { registerValidator } from "../validator/auth.validator";
+import { AuthenticatedRequest } from "../middleware/middleware";
 
 export async function getAllUser(req: Request, res: Response) {
   try {
@@ -35,9 +36,9 @@ export async function getAllUser(req: Request, res: Response) {
   }
 }
 
-export async function getMe(req: Request, res: Response) {
+export async function getMe(req: AuthenticatedRequest, res: Response) {
   try {
-    const id = req.body.user.id;
+    const id = req.userId;
     const me = await prisma.user.findUnique({
       where: { id },
       select: {
