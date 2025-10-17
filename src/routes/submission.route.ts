@@ -2,10 +2,10 @@ import { Router } from "express";
 import {
   getAllSubmissions,
   getUserSubmissions,
-  getSubmission,
   startSubmission,
   completeSubmission,
   deleteSubmission,
+  getSubmissionByQuiz,
 } from "../controllers/submission.controller";
 import { middleware } from "../middleware/middleware";
 
@@ -17,7 +17,11 @@ submissionRouter.get(
   middleware(["user", "admin"]),
   getUserSubmissions
 );
-submissionRouter.get("/:id", middleware(["user", "admin"]), getSubmission);
+submissionRouter.get(
+  "/:quizId",
+  middleware(["user", "admin"]),
+  getSubmissionByQuiz
+);
 submissionRouter.post("/", middleware(["user", "admin"]), startSubmission);
 submissionRouter.put(
   "/:id/complete",

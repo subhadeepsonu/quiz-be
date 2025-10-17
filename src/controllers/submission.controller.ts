@@ -73,25 +73,47 @@ export async function getUserSubmissions(req: Request, res: Response) {
   }
 }
 
-export async function getSubmission(req: Request, res: Response) {
+export async function getSubmissionByQuiz(
+  req: AuthenticatedRequest,
+  res: Response
+) {
   try {
-    const { id } = req.params;
-    const submission = await prisma.submission.findUnique({
-      where: { id },
+    const { quizId } = req.params;
+    const userId = req.userId;
+
+    if (!userId) {
+      res.status(StatusCodes.UNAUTHORIZED).json({
+        error: "Unauthorized: User not found in token",
+      });
+    }
+
+    const submission = await prisma.submission.findFirst({
+      where: {
+        userId,
+        quizId,
+        status: "completed",
+      },
+      orderBy: {
+        startedAt: "desc",
+      },
       include: {
         quiz: true,
         answers: { include: { question: true } },
       },
     });
 
-    if (!submission)
-      res.status(StatusCodes.NOT_FOUND).json({ error: "Submission not found" });
+    if (!submission) {
+      res.status(StatusCodes.NOT_FOUND).json({
+        error: "No submission found for this quiz",
+      });
+    }
 
     res.json(submission);
   } catch (error) {
-    res
-      .status(StatusCodes.INTERNAL_SERVER_ERROR)
-      .json({ error: "Failed to fetch submission" });
+    console.error(error);
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+      error: "Failed to fetch submission results",
+    });
   }
 }
 
