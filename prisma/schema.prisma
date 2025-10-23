@@ -239,23 +239,21 @@ model Question {
 }
 
 model Submission {
-  id           String           @id @default(cuid())
-  userId       String
-  quizId       String
-  startedAt    DateTime         @default(now())
-  endedAt      DateTime?
-  updatedAt    DateTime         @updatedAt
-  status       SubmissionStatus @default(inProgress)
-  totalScore   Float?
-  maxScore     Float?
-  percentage   Float?
-  timeSpentSec Int? // Total time spent in seconds
-
-  // Detailed scoring
-  correctAnswers   Int @default(0)
-  incorrectAnswers Int @default(0)
-  unansweredCount  Int @default(0)
-  flaggedCount     Int @default(0)
+  id               String           @id @default(cuid())
+  userId           String
+  quizId           String
+  startedAt        DateTime         @default(now())
+  endedAt          DateTime?
+  updatedAt        DateTime         @updatedAt
+  status           SubmissionStatus @default(inProgress)
+  totalScore       Float?
+  maxScore         Float?
+  percentage       Float?
+  timeSpentSec     Int?
+  correctAnswers   Int              @default(0)
+  incorrectAnswers Int              @default(0)
+  unansweredCount  Int              @default(0)
+  flaggedCount     Int              @default(0)
 
   // Relations
   user    User              @relation(fields: [userId], references: [id])

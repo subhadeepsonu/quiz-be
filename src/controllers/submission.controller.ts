@@ -85,7 +85,7 @@ export async function getSubmissionByQuiz(
       res.status(StatusCodes.UNAUTHORIZED).json({
         error: "Unauthorized: User not found in token",
       });
-      return;
+      return
     }
 
     const submission = await prisma.submission.findFirst({
@@ -97,7 +97,9 @@ export async function getSubmissionByQuiz(
       orderBy: { startedAt: "desc" },
       include: {
         quiz: true,
-        answers: { include: { question: true } },
+        answers: {
+          include: { question: true },
+        },
       },
     });
 
@@ -105,17 +107,60 @@ export async function getSubmissionByQuiz(
       res.status(StatusCodes.NOT_FOUND).json({
         error: "No submission found for this quiz",
       });
-      return;
+      return
+    }
+    const totalTimeSec = submission.answers.reduce((acc: number, answer) => {
+      return acc + (answer.timeTakenSec ? Number(answer.timeTakenSec) : 0);
+    }, 0);
+
+    let categorySpecificData: Record<
+      string,
+      { totalTime: number; questionCount: number; averageTimePerQuestion?: number }
+    > = {};
+
+    if (submission.quiz.category === "MOCK_TESTS") {
+      categorySpecificData = submission.answers.reduce(
+        (acc: any, answer: any) => {
+          const section = answer.question?.questionSection;
+          const time = answer.timeTakenSec;
+
+          if (time != null && section) {
+            if (!acc[section]) acc[section] = { totalTime: 0, questionCount: 0 };
+            acc[section].totalTime += Number(time);
+            acc[section].questionCount += 1;
+          }
+          return acc;
+        },
+        {}
+      );
+
+      for (const [section, data] of Object.entries(categorySpecificData)) {
+        data.averageTimePerQuestion =
+          data.questionCount > 0 ? data.totalTime / data.questionCount : 0;
+      }
     }
 
-    res.json(submission);
+    const avgTimePerQuestionSec =
+      submission.answers.length > 0
+        ? totalTimeSec / submission.answers.length
+        : 0;
+
+    res.json({
+      submission,
+      totalTimeSec,
+      avgTimePerQuestionSec,
+      categorySpecificData,
+    });
+    return
   } catch (error) {
     console.error(error);
     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
       error: "Failed to fetch submission results",
     });
+    return
   }
 }
+
 
 export async function completeSubmission(req: Request, res: Response) {
   try {
