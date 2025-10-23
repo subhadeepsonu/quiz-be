@@ -121,14 +121,23 @@ export async function getSubmissionByQuiz(
     if (submission.quiz.category === "MOCK_TESTS") {
       categorySpecificData = submission.answers.reduce(
         (acc: any, answer: any) => {
-          const section = answer.question?.questionSection;
+          let section = answer.question?.questionSection;
           const time = answer.timeTakenSec;
 
           if (time != null && section) {
+            
+            if (
+              section === "DATA_INSIGHTS" ||
+              section === "INTEGRATED_REASONING"
+            ) {
+              section = "DATA_INSIGHTS_AND_IR";
+            }
+
             if (!acc[section]) acc[section] = { totalTime: 0, questionCount: 0 };
             acc[section].totalTime += Number(time);
             acc[section].questionCount += 1;
           }
+
           return acc;
         },
         {}
@@ -139,6 +148,7 @@ export async function getSubmissionByQuiz(
           data.questionCount > 0 ? data.totalTime / data.questionCount : 0;
       }
     }
+
 
     const avgTimePerQuestionSec =
       submission.answers.length > 0
