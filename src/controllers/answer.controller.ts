@@ -7,10 +7,12 @@ export async function saveAnswer(req: Request, res: Response) {
     const { submissionId, questionId, selectedOptions, flagged, timeTakenSec } =
       req.body;
 
-    if (!submissionId || !questionId)
+    if (!submissionId || !questionId) {
       res
         .status(StatusCodes.BAD_REQUEST)
         .json({ error: "submissionId and questionId are required" });
+      return;
+    }
 
     const answer = await prisma.submittedAnswer.upsert({
       where: {
