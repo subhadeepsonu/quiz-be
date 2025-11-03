@@ -185,6 +185,7 @@ enum QuestionType {
   caseStudy
   dataInterpretation
   readingComprehension
+  TWO_PART_ANALYSIS
 }
 
 enum QuestionCategory {
@@ -194,48 +195,49 @@ enum QuestionCategory {
   general
 }
 
-enum DifficultyLevel {
-  easy
-  medium
-  hard
-}
-
 model Question {
-  id               String            @id @default(cuid())
-  questionText     String
-  image            String?
-  questionType     QuestionType
-  questionSection  SectionEnum?
-  questionTopic    TopicEnum?
-  paragraphText    String?
-  optionA          String?
-  optionB          String?
-  optionC          String?
-  optionD          String?
-  optionE          String?
-  correctOptions   String[]          @default([])
-  explanation      String?
-  answerImage      String?
-  tableData        Json?
-  caseStudyData    Json?
-  blankOptions     Json?
-  subQuestions     Json?
-  points           Int               @default(1)
-  quizId           String
-  isDeleted        Boolean           @default(false)
-  orderIndex       Int               @default(0)
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
-  sectionId        String?
-  topicId          String?
-  section          Section[]
-  topic            Topic[]
-  quiz             Quiz              @relation(fields: [quizId], references: [id], onDelete: Cascade)
-  submittedAnswers SubmittedAnswer[]
+  id                  String            @id @default(cuid())
+  questionText        String
+  image               String?
+  questionType        QuestionType
+  questionSection     SectionEnum?
+  questionTopic       TopicEnum?
+  paragraphText       String?
+  optionA             String?
+  optionB             String?
+  optionC             String?
+  optionD             String?
+  optionE             String?
+  correctOptions      String[]          @default([])
+  twoPartAnalysisData Json?
+  explanation         String?
+  answerImage         String?
+  tableData           Json?
+  caseStudyData       Json?
+  blankOptions        Json?
+  subQuestions        Json?
+  points              Int               @default(1)
+  quizId              String
+  isDeleted           Boolean           @default(false)
+  orderIndex          Int               @default(0)
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+  sectionId           String?
+  topicId             String?
+  section             Section[]
+  topic               Topic[]
+  quiz                Quiz              @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  submittedAnswers    SubmittedAnswer[]
 
   @@index([questionType])
   @@index([quizId])
   @@index([isDeleted])
+}
+
+enum DifficultyLevel {
+  easy
+  medium
+  hard
 }
 
 model Submission {

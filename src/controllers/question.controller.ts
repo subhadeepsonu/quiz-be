@@ -98,6 +98,7 @@ export async function createQuestion(req: Request, res: Response) {
         caseStudyData: check.data.caseStudyData,
         blankOptions: check.data.blankOptions,
         subQuestions: check.data.subQuestions,
+        twoPartAnalysisData: check.data.twoPartAnalysisData,
         points: check.data.points || 1,
         quizId: check.data.quizId,
         orderIndex: check.data.orderIndex || 0,

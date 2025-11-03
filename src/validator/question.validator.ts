@@ -58,16 +58,19 @@ const SubQuestionSchema = z.object({
 
 export const QuestionSchema = z
   .object({
-    // Updated field names to match Prisma schema
+
     questionText: z.string().min(1, "Question text is required"),
     image: z.string().optional(),
     questionType: QuestionTypeEnum,
     questionCategory: QuestionCategoryEnum,
 
-    // Mock test specific fields - optional for all question types
     questionSection: SectionEnumSchema.optional(),
     questionTopic: TopicEnumSchema.optional(),
-
+    twoPartAnalysisData: z.object({
+      correctPart1Option: z.number(),
+      correctPart2Option: z.number(),
+      options: z.array(z.string())
+    }),
     paragraphText: z.string().optional(),
     optionA: z.string().optional(),
     optionB: z.string().optional(),
@@ -103,9 +106,6 @@ export const QuestionSchema = z
     const isFillInBlank = data.questionType === "fillInBlankDropdown";
     const isTableWithOptions = data.questionType === "tableWithOptions";
     const isImageMultiBoolean = data.questionType === "imageMultiBoolean";
-
-
-
 
     // Standard option-based questions that need A-E options
     const needsStandardOptions = [
