@@ -60,5 +60,5 @@ jobs:
               subhadeepthandaka/quiz-be:${{ github.ref_name }}
 
             sleep 10
-            sudo docker exec quiz-be npx prisma migrate deploy
+            sudo docker exec quiz-be npx prisma migrate dev
             echo "Deployment complete!"
