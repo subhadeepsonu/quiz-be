@@ -60,6 +60,7 @@ export async function getQuiz(req: Request, res: Response) {
     });
     return;
   } catch (error) {
+    console.log(error)
     res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
       .json({ error: "Internal Server Error" });

@@ -71,7 +71,7 @@ export const QuestionSchema = z
       correctPart1Option: z.number(),
       correctPart2Option: z.number(),
       options: z.array(z.string())
-    }),
+    }).optional(),
     paragraphText: z.string().optional(),
     optionA: z.string().optional(),
     optionB: z.string().optional(),
