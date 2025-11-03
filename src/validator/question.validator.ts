@@ -25,6 +25,7 @@ const CaseStudyQuestionSchema = z.object({
   imageUrl: z.string().optional(),
   correctOption: z.array(CorrectOptionEnum).optional(),
   booleanAnswer: z.boolean().optional(),
+
   subQuestions: z
     .array(
       z.object({
