@@ -59,7 +59,7 @@ function getAllUser(req, res) {
 function getMe(req, res) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            const id = req.body.user.id;
+            const id = req.userId;
             const me = yield db_1.prisma.user.findUnique({
                 where: { id },
                 select: {

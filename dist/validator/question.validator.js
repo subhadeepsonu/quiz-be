@@ -1,10 +1,12 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getDefaultQuestionData = exports.requiresSpecialData = exports.requiresParagraphText = exports.requiresImage = exports.isStandardOptionQuestion = exports.validateUpdateQuestion = exports.validateQuestion = exports.UpdateQuestionSchema = exports.QuestionSchema = exports.QuestionCategoryEnum = exports.QuestionTypeEnum = void 0;
+exports.getDefaultQuestionData = exports.requiresSpecialData = exports.requiresParagraphText = exports.requiresImage = exports.isStandardOptionQuestion = exports.validateUpdateQuestion = exports.validateQuestion = exports.UpdateQuestionSchema = exports.QuestionSchema = exports.TopicEnumSchema = exports.SectionEnumSchema = exports.QuestionCategoryEnum = exports.QuestionTypeEnum = void 0;
 const client_1 = require("@prisma/client");
 const zod_1 = require("zod");
 exports.QuestionTypeEnum = zod_1.z.nativeEnum(client_1.QuestionType);
 exports.QuestionCategoryEnum = zod_1.z.nativeEnum(client_1.QuestionCategory);
+exports.SectionEnumSchema = zod_1.z.nativeEnum(client_1.SectionEnum);
+exports.TopicEnumSchema = zod_1.z.nativeEnum(client_1.TopicEnum);
 const CorrectOptionEnum = zod_1.z.enum(["A", "B", "C", "D", "E"]);
 // Schema for blank options (fill-in-blank questions)
 const BlankOptionSchema = zod_1.z.object({
@@ -19,6 +21,7 @@ const CaseStudyQuestionSchema = zod_1.z.object({
     question: zod_1.z.string().min(1, "Case study question text is required"),
     type: zod_1.z.enum(["singleCorrect", "multipleCorrect", "Boolean", "multiBoolean"]),
     options: zod_1.z.array(zod_1.z.string()).optional(),
+    imageUrl: zod_1.z.string().optional(),
     correctOption: zod_1.z.array(CorrectOptionEnum).optional(),
     booleanAnswer: zod_1.z.boolean().optional(),
     subQuestions: zod_1.z
@@ -48,11 +51,17 @@ const SubQuestionSchema = zod_1.z.object({
 });
 exports.QuestionSchema = zod_1.z
     .object({
-    // Updated field names to match Prisma schema
     questionText: zod_1.z.string().min(1, "Question text is required"),
     image: zod_1.z.string().optional(),
     questionType: exports.QuestionTypeEnum,
     questionCategory: exports.QuestionCategoryEnum,
+    questionSection: exports.SectionEnumSchema.optional(),
+    questionTopic: exports.TopicEnumSchema.optional(),
+    twoPartAnalysisData: zod_1.z.object({
+        correctPart1Option: zod_1.z.number(),
+        correctPart2Option: zod_1.z.number(),
+        options: zod_1.z.array(zod_1.z.string())
+    }).optional(),
     paragraphText: zod_1.z.string().optional(),
     optionA: zod_1.z.string().optional(),
     optionB: zod_1.z.string().optional(),
@@ -74,6 +83,8 @@ exports.QuestionSchema = zod_1.z
     orderIndex: zod_1.z.number().int().min(0).default(0),
     // Boolean answer for Boolean type questions
     booleanAnswer: zod_1.z.boolean().optional(),
+    // Quiz category for validation context
+    quizCategory: zod_1.z.enum(["QUANTITATIVE", "VERBAL", "DATA_INSIGHTS", "MOCK_TESTS"]).optional(),
 })
     .superRefine((data, ctx) => {
     const isParagraph = data.questionType === "paragraph";
@@ -393,11 +404,12 @@ const requiresSpecialData = (questionType) => {
 };
 exports.requiresSpecialData = requiresSpecialData;
 // Helper function to get default question data based on type
-const getDefaultQuestionData = (questionType, questionCategory, quizId) => {
+const getDefaultQuestionData = (questionType, questionCategory, quizId, quizCategory) => {
     return {
         questionType,
         questionCategory,
         quizId,
+        quizCategory: quizCategory,
         tags: [],
         points: 1,
         orderIndex: 0,

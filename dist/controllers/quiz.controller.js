@@ -69,6 +69,7 @@ function getQuiz(req, res) {
             return;
         }
         catch (error) {
+            console.log(error);
             res
                 .status(http_status_codes_1.StatusCodes.INTERNAL_SERVER_ERROR)
                 .json({ error: "Internal Server Error" });

@@ -36,6 +36,7 @@ exports.QuizValidator = zod_1.default
             client_1.TestSubCategory.CR_TOPIC,
             client_1.TestSubCategory.CR_LONG,
             client_1.TestSubCategory.CR_ACT,
+            client_1.TestSubCategory.SECTIONAL,
         ];
         if (!validVerbalSubCategories.includes(data.subCategory)) {
             ctx.addIssue({
@@ -50,6 +51,7 @@ exports.QuizValidator = zod_1.default
             client_1.TestSubCategory.IR_TOPIC,
             client_1.TestSubCategory.IR_SECTIONAL,
             client_1.TestSubCategory.DS,
+            client_1.TestSubCategory.SECTIONAL,
         ];
         if (!validDataInsightsSubCategories.includes(data.subCategory)) {
             ctx.addIssue({

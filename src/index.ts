@@ -1,6 +1,6 @@
 import express from "express";
 import { userRouter } from "./routes/user.route";
-import cors from "cors";
+
 import { planRouter } from "./routes/plan.route";
 import { questionRouter } from "./routes/question.route";
 import { quizRouter } from "./routes/quiz.route";
