@@ -188,12 +188,7 @@ enum QuestionType {
   TWO_PART_ANALYSIS
 }
 
-enum QuestionCategory {
-  quantitative
-  verbal
-  dataInsights
-  general
-}
+
 
 model Question {
   id                  String            @id @default(cuid())
@@ -257,7 +252,6 @@ model Submission {
   unansweredCount  Int              @default(0)
   flaggedCount     Int              @default(0)
 
-  // Relations
   user    User              @relation(fields: [userId], references: [id])
   quiz    Quiz              @relation(fields: [quizId], references: [id])
   answers SubmittedAnswer[]

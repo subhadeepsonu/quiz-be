@@ -1,9 +1,7 @@
-import { QuestionType, QuestionCategory, SectionEnum, TopicEnum } from "@prisma/client";
+import { QuestionType, TopicEnum } from "@prisma/client";
 import { z } from "zod";
 
 export const QuestionTypeEnum = z.nativeEnum(QuestionType);
-export const QuestionCategoryEnum = z.nativeEnum(QuestionCategory);
-export const SectionEnumSchema = z.nativeEnum(SectionEnum);
 export const TopicEnumSchema = z.nativeEnum(TopicEnum);
 const CorrectOptionEnum = z.enum(["A", "B", "C", "D", "E"]);
 
@@ -63,9 +61,6 @@ export const QuestionSchema = z
     questionText: z.string().min(1, "Question text is required"),
     image: z.string().optional(),
     questionType: QuestionTypeEnum,
-    questionCategory: QuestionCategoryEnum,
-
-    questionSection: SectionEnumSchema.optional(),
     questionTopic: TopicEnumSchema.optional(),
     twoPartAnalysisData: z.object({
       correctPart1Option: z.number(),
@@ -113,7 +108,6 @@ export const QuestionSchema = z
       "singleCorrect",
       "multipleCorrect",
       "paragraph",
-      "tableWithOptions",
     ].includes(data.questionType);
 
     if (isCaseStudy) {
@@ -483,13 +477,11 @@ export const requiresSpecialData = (questionType: string): boolean => {
 // Helper function to get default question data based on type
 export const getDefaultQuestionData = (
   questionType: QuestionType,
-  questionCategory: QuestionCategory,
   quizId: string,
   quizCategory?: string
 ): Partial<QuestionSchemaType> => {
   return {
     questionType,
-    questionCategory,
     quizId,
     quizCategory: quizCategory as any,
     tags: [],
