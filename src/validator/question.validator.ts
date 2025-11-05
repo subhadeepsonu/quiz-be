@@ -58,7 +58,7 @@ const SubQuestionSchema = z.object({
 export const QuestionSchema = z
   .object({
 
-    questionText: z.string().min(1, "Question text is required"),
+    questionText: z.string().optional(),
     image: z.string().optional(),
     questionType: QuestionTypeEnum,
     questionTopic: TopicEnumSchema.optional(),
