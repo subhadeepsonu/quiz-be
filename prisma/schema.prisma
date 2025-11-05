@@ -188,11 +188,9 @@ enum QuestionType {
   TWO_PART_ANALYSIS
 }
 
-
-
 model Question {
   id                  String            @id @default(cuid())
-  questionText        String
+  questionText        String?
   image               String?
   questionType        QuestionType
   questionSection     SectionEnum?
