@@ -43,8 +43,8 @@ const CaseStudyDataSchema = z.object({
 
 // Schema for table data
 const TableDataSchema = z.object({
-  columns: z.array(z.string()).min(1, "At least one column is required"),
-  rows: z.array(z.array(z.string())).min(1, "At least one row is required"),
+  columns: z.array(z.any()).min(1, "At least one column is required"),
+  rows: z.array(z.array(z.any())).min(1, "At least one row is required"),
 });
 
 // Schema for sub-questions (image multi-boolean questions)
