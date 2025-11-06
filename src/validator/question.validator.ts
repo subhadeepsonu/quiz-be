@@ -38,10 +38,10 @@ const CaseStudyQuestionSchema = z.object({
 
 const CaseStudyDataSchema = z.object({
   sections: z.array(CaseStudySectionSchema).min(1),
-  questions: z.array(CaseStudyQuestionSchema).min(1),
+  questions: z.array(z.any()).min(1),
 });
 
-// Schema for table data
+
 const TableDataSchema = z.object({
   columns: z.array(z.any()).min(1, "At least one column is required"),
   rows: z.array(z.array(z.any())).min(1, "At least one row is required"),
