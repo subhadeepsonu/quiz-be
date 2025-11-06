@@ -14,6 +14,7 @@ const BlankOptionSchema = z.object({
 const CaseStudySectionSchema = z.object({
   title: z.string().min(1, "Section title is required"),
   content: z.string().min(1, "Section content is required"),
+  imageUrl: z.string().optional(),
 });
 
 const CaseStudyQuestionSchema = z.object({
@@ -23,7 +24,6 @@ const CaseStudyQuestionSchema = z.object({
   imageUrl: z.string().optional(),
   correctOption: z.array(CorrectOptionEnum).optional(),
   booleanAnswer: z.boolean().optional(),
-
   subQuestions: z
     .array(
       z.object({
@@ -57,7 +57,6 @@ const SubQuestionSchema = z.object({
 
 export const QuestionSchema = z
   .object({
-
     questionText: z.string().optional(),
     image: z.string().optional(),
     questionType: QuestionTypeEnum,
