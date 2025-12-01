@@ -44,8 +44,12 @@ export async function getQuiz(req: Request, res: Response) {
         questions: {
           where: {
             isDeleted: false
+          },
+          orderBy: {
+            createdAt: "asc"
           }
         },
+
       },
     });
 
