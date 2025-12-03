@@ -1,4 +1,4 @@
-import { QuestionType, TopicEnum } from "@prisma/client";
+import { QuestionType, SectionEnum, TopicEnum } from "@prisma/client";
 import { z } from "zod";
 
 export const QuestionTypeEnum = z.nativeEnum(QuestionType);
@@ -62,6 +62,7 @@ export const QuestionSchema = z
     image: z.string().optional(),
     questionType: QuestionTypeEnum,
     questionTopic: TopicEnumSchema.optional(),
+    questionSection: z.nativeEnum(SectionEnum).optional(),
     twoPartAnalysisData: z.object({
       correctPart1Option: z.number(),
       correctPart2Option: z.number(),

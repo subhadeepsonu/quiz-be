@@ -38,6 +38,7 @@ export async function getAllQuiz(req: Request, res: Response) {
 export async function getQuiz(req: Request, res: Response) {
   try {
     const quizId = req.params.id;
+    console.log(quizId)
     const quiz = await prisma.quiz.findUnique({
       where: { id: quizId, isDeleted: false },
       include: {
@@ -49,7 +50,6 @@ export async function getQuiz(req: Request, res: Response) {
             createdAt: "asc"
           }
         },
-
       },
     });
 
@@ -57,6 +57,7 @@ export async function getQuiz(req: Request, res: Response) {
       res.status(StatusCodes.NOT_FOUND).json({ error: "Quiz not found" });
       return;
     }
+    console.log(quiz.questions.length)
 
     res.status(StatusCodes.OK).json({
       message: "Quiz fetched successfully",
