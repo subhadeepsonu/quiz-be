@@ -2,11 +2,11 @@ import { TestCategory, TestSubCategory } from "@prisma/client";
 import z from "zod";
 
 export const QuizPatchValidator = z.object({
-  quizes: z.array(z.object({
-    quizId: z.string(),
-    seqNo: z.number()
-  })
-  )
+
+  quizId: z.string(),
+  seqNo: z.number()
+
+
 })
 
 export const QuizValidator = z

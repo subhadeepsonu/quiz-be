@@ -18,6 +18,9 @@ export async function getAllQuiz(req: Request, res: Response) {
       include: {
         questions: true,
       },
+      orderBy: {
+        seqNo: 'asc'
+      }
     });
 
     res.status(StatusCodes.OK).json({
@@ -161,16 +164,16 @@ export async function reorderQuiz(req: Request, res: Response) {
       });
       return;
     }
-    for (const quiz of check.data.quizes) {
-      await prisma.quiz.update({
-        where: { id: quiz.quizId },
-        data: {
-          seqNo: quiz.seqNo,
-        },
-      });
-    }
+    const updateQuiz = await prisma.quiz.update({
+      where: { id: check.data.quizId },
+      data: {
+        seqNo: check.data.seqNo
+      }
+    })
+
     res.status(StatusCodes.OK).json({
       message: "Quizzes reordered successfully",
+      data: updateQuiz
     });
     return;
 
