@@ -162,6 +162,7 @@ model Quiz {
   description    String?
   category       TestCategory
   subCategory    TestSubCategory?
+  seqNo          Int              @default(0)
   duration       Int
   totalQuestions Int              @default(0)
   isDeleted      Boolean          @default(false)

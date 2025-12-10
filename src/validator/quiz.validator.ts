@@ -1,6 +1,14 @@
 import { TestCategory, TestSubCategory } from "@prisma/client";
 import z from "zod";
 
+export const QuizPatchValidator = z.object({
+  quizes: z.array(z.object({
+    quizId: z.string(),
+    seqNo: z.number()
+  })
+  )
+})
+
 export const QuizValidator = z
   .object({
     title: z.string().min(1, "Title is required"),

@@ -1,0 +1,17 @@
+/*
+  Warnings:
+
+  - The values [MATH_RELATED] on the enum `TopicEnum` will be removed. If these variants are still used in the database, this will fail.
+
+*/
+-- AlterEnum
+BEGIN;
+CREATE TYPE "TopicEnum_new" AS ENUM ('READING_COMPREHENSION', 'STRENGTH', 'WEAKEN', 'FLAW', 'PARADOX', 'INFERENCE', 'ASSUMPTIONS', 'ARITHMETIC', 'COORDINATE_GEOMETRY', 'PROBABILITY', 'PERMUTATION_COMBINATION', 'ALGEBRA', 'NUMBER_PROPERTIES', 'MODS_INEQUALITIES', 'STATISTICS', 'GENERAL_WORD_PROBLEMS', 'DATA_SUFFICIENCY', 'MATH_RELATEDf', 'NON_MATH_RELATED', 'GRAPHICAL_INTERPRETATION', 'TABLE_ANALYSIS', 'MULTI_SOURCE_REASONING', 'TWO_PART_ANALYSTS');
+ALTER TABLE "Question" ALTER COLUMN "questionTopic" TYPE "TopicEnum_new" USING ("questionTopic"::text::"TopicEnum_new");
+ALTER TYPE "TopicEnum" RENAME TO "TopicEnum_old";
+ALTER TYPE "TopicEnum_new" RENAME TO "TopicEnum";
+DROP TYPE "TopicEnum_old";
+COMMIT;
+
+-- AlterTable
+ALTER TABLE "Quiz" ADD COLUMN     "seqNo" INTEGER NOT NULL DEFAULT 0;

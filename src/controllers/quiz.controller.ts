@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
 import { prisma } from "../db";
-import { QuizValidator } from "../validator/quiz.validator";
+import { QuizPatchValidator, QuizValidator } from "../validator/quiz.validator";
 import { TestCategory, TestSubCategory } from "@prisma/client";
 
 export async function getAllQuiz(req: Request, res: Response) {
@@ -150,6 +150,38 @@ export async function updateQuiz(req: Request, res: Response) {
   }
 }
 
+export async function reorderQuiz(req: Request, res: Response) {
+  try {
+    const body = req.body
+    const check = QuizPatchValidator.safeParse(body)
+    if (!check.success) {
+      res.status(StatusCodes.BAD_REQUEST).json({
+        error: "Invalid request body",
+        details: check.error.errors,
+      });
+      return;
+    }
+    for (const quiz of check.data.quizes) {
+      await prisma.quiz.update({
+        where: { id: quiz.quizId },
+        data: {
+          seqNo: quiz.seqNo,
+        },
+      });
+    }
+    res.status(StatusCodes.OK).json({
+      message: "Quizzes reordered successfully",
+    });
+    return;
+
+  } catch (error) {
+    res
+      .status(StatusCodes.INTERNAL_SERVER_ERROR)
+      .json({ error: "Internal Server Error" });
+    return;
+  }
+
+}
 export async function deleteQuiz(req: Request, res: Response) {
   try {
     const quizId = req.params.id;
