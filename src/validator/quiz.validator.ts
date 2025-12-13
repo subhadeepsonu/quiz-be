@@ -17,6 +17,7 @@ export const QuizValidator = z
     subCategory: z.nativeEnum(TestSubCategory).optional(),
     duration: z.coerce.number().int().positive("Duration must be a positive number"),
     totalQuestions: z.coerce.number().int().min(0, "Total questions cannot be negative").optional(),
+    seqNo: z.number().optional(),
   })
   .superRefine((data, ctx) => {
     if (data.category === TestCategory.QUANTITATIVE && data.subCategory) {

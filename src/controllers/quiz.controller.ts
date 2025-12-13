@@ -137,6 +137,7 @@ export async function updateQuiz(req: Request, res: Response) {
         subCategory: check.data.subCategory,
         duration: check.data.duration,
         totalQuestions: check.data.totalQuestions || 0,
+        seqNo: check.data.seqNo
       },
     });
 
