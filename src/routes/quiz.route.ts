@@ -6,6 +6,7 @@ import {
   updateQuiz,
   deleteQuiz,
   reorderQuiz,
+  TriggerActive,
 } from "../controllers/quiz.controller";
 import { middleware } from "../middleware/middleware";
 
@@ -16,4 +17,5 @@ quizRouter.get("/:id", middleware(["admin", "user"]), getQuiz);
 quizRouter.post("/", middleware(["admin"]), createQuiz);
 quizRouter.put("/:id", middleware(["admin"]), updateQuiz);
 quizRouter.patch("/reorder", middleware(["admin"]), reorderQuiz)
+quizRouter.patch("/active/:id", middleware(["admin"]), TriggerActive)
 quizRouter.delete("/:id", middleware(["admin"]), deleteQuiz);

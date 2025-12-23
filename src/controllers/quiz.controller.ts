@@ -4,16 +4,18 @@ import { prisma } from "../db";
 import { QuizPatchValidator, QuizValidator } from "../validator/quiz.validator";
 import { TestCategory, TestSubCategory } from "@prisma/client";
 
-export async function getAllQuiz(req: Request, res: Response) {
+export async function getAllQuiz(req: any, res: Response) {
   try {
     const category = req.query.category as TestCategory | undefined;
     const subCategory = req.query.subCategory as TestSubCategory | undefined;
     console.log(category, subCategory)
+    const role = req.userRole;
     const quizzes = await prisma.quiz.findMany({
       where: {
         ...(category && { category }),
         ...(subCategory && { subCategory }),
         isDeleted: false,
+        ...(role === "user" && { isActive: true }),
       },
       include: {
         questions: true,
@@ -153,6 +155,37 @@ export async function updateQuiz(req: Request, res: Response) {
     return;
   }
 }
+export async function TriggerActive(req: Request, res: Response) {
+  try {
+    const quizId = req.params.id;
+    const quiz = await prisma.quiz.findUnique({
+      where: { id: quizId },
+    });
+
+    if (!quiz) {
+      res.status(StatusCodes.NOT_FOUND).json({ error: "Quiz not found" });
+      return;
+    }
+
+    await prisma.quiz.update({
+      where: { id: quizId },
+      data: {
+        isActive: !quiz.isActive,
+      },
+    });
+
+    res.status(StatusCodes.OK).json({
+      message: "Quiz status updated successfully",
+    });
+    return;
+  } catch (error) {
+    res
+      .status(StatusCodes.INTERNAL_SERVER_ERROR)
+      .json({ error: "Internal Server Error" });
+    return;
+  }
+}
+
 
 export async function reorderQuiz(req: Request, res: Response) {
   try {
