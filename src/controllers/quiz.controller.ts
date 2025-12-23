@@ -15,7 +15,7 @@ export async function getAllQuiz(req: any, res: Response) {
         ...(category && { category }),
         ...(subCategory && { subCategory }),
         isDeleted: false,
-        ...(role === "user" && { isActive: true }),
+        ...(role === "user" ? { isActive: true } : {}),
       },
       include: {
         questions: true,
