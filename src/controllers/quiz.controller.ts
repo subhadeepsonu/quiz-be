@@ -19,7 +19,11 @@ export async function getAllQuiz(req: any, res: Response) {
         ...(role === "user" ? { isActive: true } : {}),
       },
       include: {
-        questions: true,
+        questions: {
+          where: {
+            isDeleted: false
+          }
+        },
       },
       orderBy: {
         seqNo: 'asc'
