@@ -10,6 +10,7 @@ export async function getAllQuiz(req: any, res: Response) {
     const subCategory = req.query.subCategory as TestSubCategory | undefined;
     console.log(category, subCategory)
     const role = req.userRole;
+    console.log("User role:", role);
     const quizzes = await prisma.quiz.findMany({
       where: {
         ...(category && { category }),
