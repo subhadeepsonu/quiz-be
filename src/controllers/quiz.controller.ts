@@ -24,6 +24,15 @@ export async function getAllQuiz(req: any, res: Response) {
             isDeleted: false
           }
         },
+        _count: {
+          select: {
+            submissions: {
+              where: {
+                status: "completed"
+              }
+            }
+          }
+        }
       },
       orderBy: {
         seqNo: 'asc'
