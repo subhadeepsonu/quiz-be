@@ -192,6 +192,7 @@ enum QuestionType {
 
 model Question {
   id                  String            @id @default(cuid())
+  orderNo             Int               @default(0)
   questionText        String?
   image               String?
   questionType        QuestionType
