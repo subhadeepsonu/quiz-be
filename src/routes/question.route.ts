@@ -15,7 +15,7 @@ questionRouter.get("/", middleware(["admin", "user"]), getAllQuestion);
 questionRouter.get("/:id", middleware(["admin", "user"]), getQuestion);
 questionRouter.post("/", middleware(["admin"]), createQuestion);
 // PUT /api/question/reorder
-questionRouter.put("/question/reorder", async (req, res) => {
+questionRouter.put("/reorder", async (req, res) => {
   try {
     const { quizId, questionIds, section } = req.body;
 
