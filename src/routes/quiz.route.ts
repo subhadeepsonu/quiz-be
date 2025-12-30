@@ -12,11 +12,10 @@ import { middleware } from "../middleware/middleware";
 
 export const quizRouter = Router();
 
-quizRouter.get("/", middleware(["admin", "user"]), getAllQuiz);
-quizRouter.get("/:id", middleware(["admin", "user"]), getQuiz);
-quizRouter.post("/", middleware(["admin"]), createQuiz);
-quizRouter.put("/active/:id", middleware(["admin"]), TriggerActive)
-quizRouter.put("/:id", middleware(["admin"]), updateQuiz);
-quizRouter.patch("/reorder", middleware(["admin"]), reorderQuiz)
-
-quizRouter.delete("/:id", middleware(["admin"]), deleteQuiz);
+quizRouter.get("/", middleware(["admin", "user", "editor"]), getAllQuiz);
+quizRouter.get("/:id", middleware(["admin", "user", "editor"]), getQuiz);
+quizRouter.post("/", middleware(["admin", "editor"]), createQuiz);
+quizRouter.put("/active/:id", middleware(["admin", "editor"]), TriggerActive);
+quizRouter.put("/:id", middleware(["admin", "editor"]), updateQuiz);
+quizRouter.patch("/reorder", middleware(["admin", "editor"]), reorderQuiz);
+quizRouter.delete("/:id", middleware(["admin", "editor"]), deleteQuiz);

@@ -11,9 +11,9 @@ import { prisma } from "../db";
 
 export const questionRouter = Router();
 
-questionRouter.get("/", middleware(["admin", "user"]), getAllQuestion);
-questionRouter.get("/:id", middleware(["admin", "user"]), getQuestion);
-questionRouter.post("/", middleware(["admin"]), createQuestion);
+questionRouter.get("/", middleware(["admin", "user", "editor"]), getAllQuestion);
+questionRouter.get("/:id", middleware(["admin", "user", "editor"]), getQuestion);
+questionRouter.post("/", middleware(["admin", "editor"]), createQuestion);
 // PUT /api/question/reorder
 questionRouter.put("/reorder", async (req, res) => {
   try {
@@ -38,5 +38,5 @@ questionRouter.put("/reorder", async (req, res) => {
     res.status(500).json({ error: "Failed to reorder questions" });
   }
 });
-questionRouter.put("/:id", middleware(["admin"]), updateQuestion);
-questionRouter.delete("/:id", middleware(["admin"]), deleteQuestion);
+questionRouter.put("/:id", middleware(["admin", "editor"]), updateQuestion);
+questionRouter.delete("/:id", middleware(["admin", "editor"]), deleteQuestion);
