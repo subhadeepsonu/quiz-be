@@ -22,6 +22,9 @@ export async function getAllQuiz(req: any, res: Response) {
         questions: {
           where: {
             isDeleted: false
+          },
+          orderBy: {
+            orderIndex: 'asc'
           }
         },
         _count: {
@@ -66,7 +69,7 @@ export async function getQuiz(req: Request, res: Response) {
             isDeleted: false
           },
           orderBy: {
-            createdAt: "asc"
+            orderIndex: "asc"
           }
         },
       },
