@@ -19,7 +19,8 @@ export async function getAllQuestion(req: Request, res: Response) {
         isDeleted: false,
       },
       orderBy: {
-        orderIndex: 'asc'
+        orderNo: 'asc',
+        createdAt: 'asc',
       }
     });
 

@@ -69,12 +69,18 @@ export async function adminLogin(req: Request, res: Response) {
     const checkUser = await prisma.user.findUnique({
       where: {
         email: check.data.email,
-        role: "admin",
+
       },
     });
     if (!checkUser) {
       res.status(StatusCodes.UNAUTHORIZED).json({
         message: "User not found",
+      });
+      return;
+    }
+    if (checkUser.role !== "admin" && checkUser.role !== "editor") {
+      res.status(StatusCodes.UNAUTHORIZED).json({
+        message: "User is not an admin or editor",
       });
       return;
     }

@@ -137,7 +137,7 @@ export async function ChangeRole(req: Request, res: Response) {
   try {
     const body = req.body;
     const id = req.params.id;
-    if (body.role != Role.admin && body.role != Role.user) {
+    if (body.role != Role.admin && body.role != Role.user && body.role != Role.editor) {
       res.status(StatusCodes.BAD_REQUEST).json({
         message: "Invalid request",
       });

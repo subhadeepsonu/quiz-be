@@ -13,7 +13,7 @@ import { middleware } from "../middleware/middleware";
 export const userRouter = Router();
 
 userRouter.get("/", middleware(["admin"]), getAllUser);
-userRouter.get("/me", middleware(["user", "admin"]), getMe);
+userRouter.get("/me", middleware(["user", "admin", "editor"]), getMe);
 userRouter.get("/:id", middleware(["admin"]), getUser);
 userRouter.post("/", middleware(["admin"]), createUser);
 userRouter.put("/:id/promote", middleware(["admin"]), ChangeRole);
