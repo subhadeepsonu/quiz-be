@@ -69,8 +69,8 @@ export async function getQuiz(req: Request, res: Response) {
             isDeleted: false
           },
           orderBy: {
-            orderIndex: "asc",
-            createdAt: "asc"
+            orderNo: "asc",
+
           }
         },
       },
