@@ -3,9 +3,13 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.QuizValidator = void 0;
+exports.QuizValidator = exports.QuizPatchValidator = void 0;
 const client_1 = require("@prisma/client");
 const zod_1 = __importDefault(require("zod"));
+exports.QuizPatchValidator = zod_1.default.object({
+    quizId: zod_1.default.string(),
+    seqNo: zod_1.default.number()
+});
 exports.QuizValidator = zod_1.default
     .object({
     title: zod_1.default.string().min(1, "Title is required"),
@@ -14,6 +18,7 @@ exports.QuizValidator = zod_1.default
     subCategory: zod_1.default.nativeEnum(client_1.TestSubCategory).optional(),
     duration: zod_1.default.coerce.number().int().positive("Duration must be a positive number"),
     totalQuestions: zod_1.default.coerce.number().int().min(0, "Total questions cannot be negative").optional(),
+    seqNo: zod_1.default.number().optional(),
 })
     .superRefine((data, ctx) => {
     if (data.category === client_1.TestCategory.QUANTITATIVE && data.subCategory) {

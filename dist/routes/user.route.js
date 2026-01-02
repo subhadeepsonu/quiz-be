@@ -6,7 +6,7 @@ const user_controller_1 = require("../controllers/user.controller");
 const middleware_1 = require("../middleware/middleware");
 exports.userRouter = (0, express_1.Router)();
 exports.userRouter.get("/", (0, middleware_1.middleware)(["admin"]), user_controller_1.getAllUser);
-exports.userRouter.get("/me", (0, middleware_1.middleware)(["user", "admin"]), user_controller_1.getMe);
+exports.userRouter.get("/me", (0, middleware_1.middleware)(["user", "admin", "editor"]), user_controller_1.getMe);
 exports.userRouter.get("/:id", (0, middleware_1.middleware)(["admin"]), user_controller_1.getUser);
 exports.userRouter.post("/", (0, middleware_1.middleware)(["admin"]), user_controller_1.createUser);
 exports.userRouter.put("/:id/promote", (0, middleware_1.middleware)(["admin"]), user_controller_1.ChangeRole);

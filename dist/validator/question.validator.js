@@ -14,6 +14,7 @@ const BlankOptionSchema = zod_1.z.object({
 const CaseStudySectionSchema = zod_1.z.object({
     title: zod_1.z.string().min(1, "Section title is required"),
     content: zod_1.z.string().min(1, "Section content is required"),
+    imageUrl: zod_1.z.string().optional(),
 });
 const CaseStudyQuestionSchema = zod_1.z.object({
     question: zod_1.z.string().min(1, "Case study question text is required"),
@@ -33,12 +34,12 @@ const CaseStudyQuestionSchema = zod_1.z.object({
 });
 const CaseStudyDataSchema = zod_1.z.object({
     sections: zod_1.z.array(CaseStudySectionSchema).min(1),
-    questions: zod_1.z.array(CaseStudyQuestionSchema).min(1),
+    questions: zod_1.z.array(zod_1.z.any()).min(1),
 });
-// Schema for table data
 const TableDataSchema = zod_1.z.object({
     columns: zod_1.z.array(zod_1.z.any()).min(1, "At least one column is required"),
     rows: zod_1.z.array(zod_1.z.array(zod_1.z.any())).min(1, "At least one row is required"),
+    questions: zod_1.z.array(zod_1.z.any()).optional(),
 });
 // Schema for sub-questions (image multi-boolean questions)
 const SubQuestionSchema = zod_1.z.object({
@@ -53,17 +54,18 @@ exports.QuestionSchema = zod_1.z
     image: zod_1.z.string().optional(),
     questionType: exports.QuestionTypeEnum,
     questionTopic: exports.TopicEnumSchema.optional(),
+    questionSection: zod_1.z.nativeEnum(client_1.SectionEnum).optional(),
     twoPartAnalysisData: zod_1.z.object({
         correctPart1Option: zod_1.z.number(),
         correctPart2Option: zod_1.z.number(),
         options: zod_1.z.array(zod_1.z.string())
     }).optional(),
     paragraphText: zod_1.z.string().optional(),
-    optionA: zod_1.z.string().optional(),
-    optionB: zod_1.z.string().optional(),
-    optionC: zod_1.z.string().optional(),
-    optionD: zod_1.z.string().optional(),
-    optionE: zod_1.z.string().optional(),
+    optionA: zod_1.z.string().optional().nullable(),
+    optionB: zod_1.z.string().optional().nullable(),
+    optionC: zod_1.z.string().optional().nullable(),
+    optionD: zod_1.z.string().optional().nullable(),
+    optionE: zod_1.z.string().optional().nullable(),
     sectionId: zod_1.z.string().optional(),
     topicId: zod_1.z.string().optional(),
     correctOption: zod_1.z.array(CorrectOptionEnum).optional(),

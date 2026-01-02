@@ -166,7 +166,7 @@ function ChangeRole(req, res) {
         try {
             const body = req.body;
             const id = req.params.id;
-            if (body.role != client_1.Role.admin && body.role != client_1.Role.user) {
+            if (body.role != client_1.Role.admin && body.role != client_1.Role.user && body.role != client_1.Role.editor) {
                 res.status(http_status_codes_1.StatusCodes.BAD_REQUEST).json({
                     message: "Invalid request",
                 });

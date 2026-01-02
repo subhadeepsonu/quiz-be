@@ -89,12 +89,17 @@ function adminLogin(req, res) {
             const checkUser = yield db_1.prisma.user.findUnique({
                 where: {
                     email: check.data.email,
-                    role: "admin",
                 },
             });
             if (!checkUser) {
                 res.status(http_status_codes_1.StatusCodes.UNAUTHORIZED).json({
                     message: "User not found",
+                });
+                return;
+            }
+            if (checkUser.role !== "admin" && checkUser.role !== "editor") {
+                res.status(http_status_codes_1.StatusCodes.UNAUTHORIZED).json({
+                    message: "User is not an admin or editor",
                 });
                 return;
             }
