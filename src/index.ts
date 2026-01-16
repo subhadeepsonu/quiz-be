@@ -1,6 +1,6 @@
 import express from "express";
 import { userRouter } from "./routes/user.route";
-
+import cors from "cors";
 import { planRouter } from "./routes/plan.route";
 import { questionRouter } from "./routes/question.route";
 import { quizRouter } from "./routes/quiz.route";
@@ -12,7 +12,7 @@ import { uploadRouter } from "./routes/upload.route";
 import { answerRouter } from "./routes/answer.routes";
 const app = express();
 app.use(express.json());
-
+app.use(cors())
 app.get("/", (req, res) => {
   res.json({
     message: "Hello test",
