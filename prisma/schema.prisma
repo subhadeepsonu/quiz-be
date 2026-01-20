@@ -109,6 +109,18 @@ model User {
   submissions   Submission[]
   subscriptions Subscription[]
   createdAt     DateTime       @default(now())
+
+  // Billing / entitlements
+  stripeCustomerId        String?   @unique
+  trialStartedAt          DateTime?
+  trialEndsAt             DateTime?
+  trialUsedAt             DateTime?
+  trialEndedEmailSentAt   DateTime?
+
+  // Magic-link login (beta)
+  magicLoginTokenHash     String?
+  magicLoginExpiresAt     DateTime?
+  magicLoginLastSentAt    DateTime?
 }
 
 model Plan {
@@ -121,6 +133,9 @@ model Plan {
   subscriptions Subscription[]
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
+
+  // Stripe mapping (Price ID for subscription)
+  stripePriceId String?        @unique
 }
 
 model Subscription {
@@ -134,7 +149,13 @@ model Subscription {
   endDate           DateTime
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
-  externalPaymentId String?
+
+  // Stripe subscription ID (stored in DB column "externalPaymentId" for backward compatibility)
+  stripeSubscriptionId String?          @unique @map("externalPaymentId")
+
+  // Stripe period metadata (optional)
+  currentPeriodEnd   DateTime?
+  cancelAtPeriodEnd  Boolean            @default(false)
 }
 
 model Section {

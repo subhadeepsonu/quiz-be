@@ -8,6 +8,7 @@ import {
   getSubmissionByQuiz,
 } from "../controllers/submission.controller";
 import { middleware } from "../middleware/middleware";
+import { requireQuizAccess } from "../middleware/entitlementGate";
 
 export const submissionRouter = Router();
 
@@ -22,7 +23,12 @@ submissionRouter.get(
   middleware(["user", "admin"]),
   getSubmissionByQuiz
 );
-submissionRouter.post("/", middleware(["user", "admin"]), startSubmission);
+submissionRouter.post(
+  "/",
+  middleware(["user", "admin"]),
+  requireQuizAccess(),
+  startSubmission
+);
 submissionRouter.put(
   "/:id/complete",
   middleware(["user", "admin"]),

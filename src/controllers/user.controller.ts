@@ -6,6 +6,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { registerValidator } from "../validator/auth.validator";
 import { AuthenticatedRequest } from "../middleware/middleware";
+import { computeEntitlements } from "../services/entitlements";
 
 export async function getAllUser(req: Request, res: Response) {
   try {
@@ -44,6 +45,7 @@ export async function getMe(req: AuthenticatedRequest, res: Response) {
       select: {
         role: true,
         name: true,
+        email: true,
       },
     });
     if (!me) {
@@ -62,6 +64,31 @@ export async function getMe(req: AuthenticatedRequest, res: Response) {
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
       .json({ error: "Internal Server Error" });
     return;
+  }
+}
+
+export async function getEntitlements(req: AuthenticatedRequest, res: Response) {
+  try {
+    const userId = req.userId;
+    if (!userId) {
+      res.status(StatusCodes.UNAUTHORIZED).json({ error: "Unauthorized" });
+      return;
+    }
+
+    const entitlements = await computeEntitlements(userId);
+    if (!entitlements) {
+      res.status(StatusCodes.NOT_FOUND).json({ error: "User not found" });
+      return;
+    }
+
+    res.status(StatusCodes.OK).json({
+      message: "Entitlements fetched",
+      data: entitlements,
+    });
+  } catch (error) {
+    res
+      .status(StatusCodes.INTERNAL_SERVER_ERROR)
+      .json({ error: "Internal Server Error" });
   }
 }
 export async function getUser(req: Request, res: Response) {
@@ -98,6 +125,10 @@ export async function createUser(req: Request, res: Response) {
       return;
     }
     const hashedPassword = bcrypt.hashSync(check.data.password, 10);
+    const role: Role =
+      body?.role === Role.admin || body?.role === Role.editor || body?.role === Role.user
+        ? body.role
+        : Role.user;
     const newUser = await prisma.user.upsert({
       where: {
         email: check.data.email,
@@ -105,13 +136,13 @@ export async function createUser(req: Request, res: Response) {
       update: {
         name: check.data.name,
         password: hashedPassword,
-        role: "admin",
+        role,
       },
       create: {
         name: check.data.name,
         email: check.data.email,
         password: hashedPassword,
-        role: "admin",
+        role,
       },
     });
     const user = {
@@ -173,7 +204,7 @@ export async function updateUser(req: Request, res: Response) {
   try {
     const userId = req.params.id;
     const body = req.body;
-    if (body.role != Role.admin || body.role != Role.user) {
+    if (body.role != Role.admin && body.role != Role.user && body.role != Role.editor) {
       res.status(StatusCodes.BAD_REQUEST).json({ error: "Invalid role" });
       return;
     }
