@@ -33,6 +33,9 @@ function getAllQuiz(req, res) {
                     questions: {
                         where: {
                             isDeleted: false
+                        },
+                        orderBy: {
+                            orderIndex: 'asc'
                         }
                     },
                     _count: {
@@ -77,7 +80,7 @@ function getQuiz(req, res) {
                             isDeleted: false
                         },
                         orderBy: {
-                            createdAt: "asc"
+                            orderNo: "asc",
                         }
                     },
                 },

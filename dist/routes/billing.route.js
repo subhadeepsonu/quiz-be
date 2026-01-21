@@ -1,0 +1,10 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.billingRouter = void 0;
+const express_1 = require("express");
+const middleware_1 = require("../middleware/middleware");
+const billing_controller_1 = require("../controllers/billing.controller");
+exports.billingRouter = (0, express_1.Router)();
+exports.billingRouter.post("/checkout", (0, middleware_1.middleware)(["user", "admin", "editor"]), billing_controller_1.createCheckoutSession);
+exports.billingRouter.post("/checkout-guest", billing_controller_1.createGuestCheckoutSession);
+exports.billingRouter.post("/portal", (0, middleware_1.middleware)(["user", "admin", "editor"]), billing_controller_1.createPortalSession);
