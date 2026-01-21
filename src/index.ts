@@ -10,7 +10,6 @@ import { topicRouter } from "./routes/topic.route";
 import { authRouter } from "./routes/auth.route";
 import { uploadRouter } from "./routes/upload.route";
 import { answerRouter } from "./routes/answer.routes";
-import cors from "cors";
 import dotenv from "dotenv";
 import { trialRouter } from "./routes/trial.route";
 import { runTrialExpirySweep } from "./services/trialExpiryJob";
