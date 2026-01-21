@@ -9,11 +9,17 @@ import {
   TriggerActive,
 } from "../controllers/quiz.controller";
 import { middleware } from "../middleware/middleware";
+import { requireQuizAccess } from "../middleware/entitlementGate";
 
 export const quizRouter = Router();
 
 quizRouter.get("/", middleware(["admin", "user", "editor"]), getAllQuiz);
-quizRouter.get("/:id", middleware(["admin", "user", "editor"]), getQuiz);
+quizRouter.get(
+  "/:id",
+  middleware(["admin", "user", "editor"]),
+  requireQuizAccess(),
+  getQuiz
+);
 quizRouter.post("/", middleware(["admin", "editor"]), createQuiz);
 quizRouter.put("/active/:id", middleware(["admin", "editor"]), TriggerActive);
 quizRouter.put("/:id", middleware(["admin", "editor"]), updateQuiz);

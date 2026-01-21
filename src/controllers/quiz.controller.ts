@@ -3,8 +3,9 @@ import { StatusCodes } from "http-status-codes";
 import { prisma } from "../db";
 import { QuizPatchValidator, QuizValidator } from "../validator/quiz.validator";
 import { TestCategory, TestSubCategory } from "@prisma/client";
+import { AuthenticatedRequest } from "../middleware/middleware";
 
-export async function getAllQuiz(req: any, res: Response) {
+export async function getAllQuiz(req: AuthenticatedRequest, res: Response) {
   try {
     const category = req.query.category as TestCategory | undefined;
     const subCategory = req.query.subCategory as TestSubCategory | undefined;
