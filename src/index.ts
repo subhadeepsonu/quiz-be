@@ -17,11 +17,11 @@ import { billingRouter } from "./routes/billing.route";
 import { stripeWebhook } from "./controllers/webhook.controller";
 const app = express();
 dotenv.config();
-
+app.use(cors());
 // Stripe webhooks require the raw body; mount before JSON middleware.
 app.post("/billing/webhook", express.raw({ type: "application/json" }), stripeWebhook);
 
-app.use(cors());
+
 app.use(express.json());
 
 app.get("/", (req, res) => {
