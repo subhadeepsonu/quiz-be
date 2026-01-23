@@ -1,12 +1,14 @@
 name: build and deploy
+
 on:
   push:
     branches:
       - main
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -40,19 +42,27 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
           script: |
-            echo "Connection successful!"
-            # Stop and remove any existing container with the same name
+            echo "Connected to server"
+
             sudo docker stop quiz-be || true
             sudo docker rm quiz-be || true
-            sudo docker image prune
-            # Pull the latest image
+            sudo docker image prune -f
+
             sudo docker pull subhadeepthandaka/quiz-be:${{ github.ref_name }}
 
-            # Run the new container
             sudo docker run -d -p 3000:3000 \
               --name quiz-be \
               -e DATABASE_URL="${{ secrets.DATABASE_URL }}" \
               -e JWT_SECRET="${{ secrets.JWT_SECRET }}" \
+              -e NEXT_PUBLIC_SUPABASE_URL="${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}" \
+              -e NEXT_PUBLIC_SUPABASE_ANON_KEY="${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}" \
+              -e SMTP_HOST="${{ secrets.SMTP_HOST }}" \
+              -e SMTP_PORT="${{ secrets.SMTP_PORT }}" \
+              -e SMTP_USER="${{ secrets.SMTP_USER }}" \
+              -e SMTP_PASS="${{ secrets.SMTP_PASS }}" \
+              -e EMAIL_FROM="${{ secrets.EMAIL_FROM }}" \
+              -e STRIPE_SECRET_KEY="${{ secrets.STRIPE_SECRET_KEY }}" \
+              -e STRIPE_WEBHOOK_SECRET="${{ secrets.STRIPE_WEBHOOK_SECRET }}" \
               -e AWS_ACCESS_KEY_ID="${{ secrets.AWS_ACCESS_KEY_ID }}" \
               -e AWS_SECRET_ACCESS_KEY="${{ secrets.AWS_SECRET_ACCESS_KEY }}" \
               -e AWS_REGION="${{ secrets.AWS_REGION }}" \
@@ -61,4 +71,5 @@ jobs:
 
             sleep 10
             sudo docker exec quiz-be npx prisma migrate deploy
-            echo "Deployment complete!"
+
+            echo "Deployment complete"

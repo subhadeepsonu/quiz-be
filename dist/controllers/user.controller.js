@@ -14,6 +14,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getAllUser = getAllUser;
 exports.getMe = getMe;
+exports.getEntitlements = getEntitlements;
 exports.getUser = getUser;
 exports.createUser = createUser;
 exports.ChangeRole = ChangeRole;
@@ -25,6 +26,7 @@ const client_1 = require("@prisma/client");
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const auth_validator_1 = require("../validator/auth.validator");
+const entitlements_1 = require("../services/entitlements");
 function getAllUser(req, res) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
@@ -65,6 +67,7 @@ function getMe(req, res) {
                 select: {
                     role: true,
                     name: true,
+                    email: true,
                 },
             });
             if (!me) {
@@ -84,6 +87,31 @@ function getMe(req, res) {
                 .status(http_status_codes_1.StatusCodes.INTERNAL_SERVER_ERROR)
                 .json({ error: "Internal Server Error" });
             return;
+        }
+    });
+}
+function getEntitlements(req, res) {
+    return __awaiter(this, void 0, void 0, function* () {
+        try {
+            const userId = req.userId;
+            if (!userId) {
+                res.status(http_status_codes_1.StatusCodes.UNAUTHORIZED).json({ error: "Unauthorized" });
+                return;
+            }
+            const entitlements = yield (0, entitlements_1.computeEntitlements)(userId);
+            if (!entitlements) {
+                res.status(http_status_codes_1.StatusCodes.NOT_FOUND).json({ error: "User not found" });
+                return;
+            }
+            res.status(http_status_codes_1.StatusCodes.OK).json({
+                message: "Entitlements fetched",
+                data: entitlements,
+            });
+        }
+        catch (error) {
+            res
+                .status(http_status_codes_1.StatusCodes.INTERNAL_SERVER_ERROR)
+                .json({ error: "Internal Server Error" });
         }
     });
 }
@@ -124,6 +152,9 @@ function createUser(req, res) {
                 return;
             }
             const hashedPassword = bcryptjs_1.default.hashSync(check.data.password, 10);
+            const role = (body === null || body === void 0 ? void 0 : body.role) === client_1.Role.admin || (body === null || body === void 0 ? void 0 : body.role) === client_1.Role.editor || (body === null || body === void 0 ? void 0 : body.role) === client_1.Role.user
+                ? body.role
+                : client_1.Role.user;
             const newUser = yield db_1.prisma.user.upsert({
                 where: {
                     email: check.data.email,
@@ -131,13 +162,13 @@ function createUser(req, res) {
                 update: {
                     name: check.data.name,
                     password: hashedPassword,
-                    role: "admin",
+                    role,
                 },
                 create: {
                     name: check.data.name,
                     email: check.data.email,
                     password: hashedPassword,
-                    role: "admin",
+                    role,
                 },
             });
             const user = {
@@ -205,7 +236,7 @@ function updateUser(req, res) {
         try {
             const userId = req.params.id;
             const body = req.body;
-            if (body.role != client_1.Role.admin || body.role != client_1.Role.user) {
+            if (body.role != client_1.Role.admin && body.role != client_1.Role.user && body.role != client_1.Role.editor) {
                 res.status(http_status_codes_1.StatusCodes.BAD_REQUEST).json({ error: "Invalid role" });
                 return;
             }

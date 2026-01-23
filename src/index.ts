@@ -1,6 +1,6 @@
 import express from "express";
 import { userRouter } from "./routes/user.route";
-
+import cors from "cors";
 import { planRouter } from "./routes/plan.route";
 import { questionRouter } from "./routes/question.route";
 import { quizRouter } from "./routes/quiz.route";
@@ -10,7 +10,6 @@ import { topicRouter } from "./routes/topic.route";
 import { authRouter } from "./routes/auth.route";
 import { uploadRouter } from "./routes/upload.route";
 import { answerRouter } from "./routes/answer.routes";
-import cors from "cors";
 import dotenv from "dotenv";
 import { trialRouter } from "./routes/trial.route";
 import { runTrialExpirySweep } from "./services/trialExpiryJob";
@@ -18,11 +17,11 @@ import { billingRouter } from "./routes/billing.route";
 import { stripeWebhook } from "./controllers/webhook.controller";
 const app = express();
 dotenv.config();
-
+app.use(cors());
 // Stripe webhooks require the raw body; mount before JSON middleware.
 app.post("/billing/webhook", express.raw({ type: "application/json" }), stripeWebhook);
 
-app.use(cors());
+
 app.use(express.json());
 
 app.get("/", (req, res) => {
