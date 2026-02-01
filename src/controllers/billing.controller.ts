@@ -4,6 +4,7 @@ import { prisma } from "../db";
 import { AuthenticatedRequest } from "../middleware/middleware";
 import { getStripe } from "../services/stripe";
 import { sendPasswordEmail } from "../services/email";
+import { generateMagicToken, hashMagicToken } from "../services/magicLogin";
 import bcrypt from "bcryptjs";
 
 function getFrontendBaseUrl(): string {
@@ -108,6 +109,10 @@ export async function createGuestCheckoutSession(req: Request, res: Response) {
     }
 
     const email = normalizeEmail(emailRaw);
+    const nameRaw = req.body?.name;
+    const name = nameRaw && typeof nameRaw === "string" && nameRaw.trim() 
+      ? nameRaw.trim() 
+      : email.split("@")[0] || "User";
     
     // Find or create user
     let user = await prisma.user.findUnique({ where: { email } });
@@ -117,7 +122,6 @@ export async function createGuestCheckoutSession(req: Request, res: Response) {
       // Create account with random password
       const password = randomPassword();
       const hashed = bcrypt.hashSync(password, 10);
-      const name = email.split("@")[0] || "User";
       
       user = await prisma.user.create({
         data: {
@@ -129,9 +133,31 @@ export async function createGuestCheckoutSession(req: Request, res: Response) {
       });
       isNewUser = true;
       
-      // Send password email
-      const loginUrl = `${getFrontendBaseUrl()}/auth/login`;
-      await sendPasswordEmail({ to: email, password, loginUrl });
+      // Generate magic token for auto-login
+      const magicToken = generateMagicToken();
+      const tokenHash = hashMagicToken(magicToken);
+      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+      // Store magic token in database
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          magicLoginTokenHash: tokenHash,
+          magicLoginExpiresAt: expiresAt,
+        },
+      });
+
+      // Create login URLs with checkout flow
+      const loginUrl = `${getFrontendBaseUrl()}/auth/login?checkout=true&email=${encodeURIComponent(email)}`;
+      const magicLinkUrl = `${getFrontendBaseUrl()}/auth/magic?token=${magicToken}&flow=purchase`;
+      
+      await sendPasswordEmail({ to: email, password, loginUrl, magicLinkUrl });
+    } else if (user && nameRaw && typeof nameRaw === "string" && nameRaw.trim()) {
+      // Update existing user's name if provided
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { name: nameRaw.trim() },
+      });
     }
 
     // Get plan

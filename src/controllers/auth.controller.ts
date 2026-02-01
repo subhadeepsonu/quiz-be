@@ -5,7 +5,7 @@ import jwt from "jsonwebtoken";
 import { prisma } from "../db";
 import { StatusCodes } from "http-status-codes";
 import { sendPasswordEmail } from "../services/email";
-import { hashMagicToken } from "../services/magicLogin";
+import { generateMagicToken, hashMagicToken } from "../services/magicLogin";
 import { Role } from "@prisma/client";
 
 function signJwt(user: { id: string; role: Role }) {
@@ -13,7 +13,7 @@ function signJwt(user: { id: string; role: Role }) {
 }
 
 function getFrontendBaseUrl(): string {
-  return process.env.FRONTEND_BASE_URL || "http://localhost:3001";
+  return process.env.FRONTEND_BASE_URL || "https://ascensa-frontned.vercel.app";
 }
 
 function normalizeEmail(email: string) {
@@ -229,6 +229,10 @@ export async function start(req: Request, res: Response) {
     }
 
     const email = normalizeEmail(emailRaw);
+    const nameRaw = req.body?.name;
+    const name = nameRaw && typeof nameRaw === "string" && nameRaw.trim() 
+      ? nameRaw.trim() 
+      : email.split("@")[0] || "User";
     const now = new Date();
 
     let user = await prisma.user.findUnique({ where: { email } });
@@ -239,7 +243,6 @@ export async function start(req: Request, res: Response) {
       // Create new user with random password
       password = randomPassword();
       const hashed = bcrypt.hashSync(password, 10);
-      const name = email.split("@")[0] || "User";
       user = await prisma.user.create({
         data: {
           email,
@@ -250,7 +253,7 @@ export async function start(req: Request, res: Response) {
       });
       isNewUser = true;
     } else {
-      // Existing user - generate new password
+      // Existing user - generate new password and update name if provided
       password = randomPassword();
       const hashed = bcrypt.hashSync(password, 10);
       
@@ -263,23 +266,42 @@ export async function start(req: Request, res: Response) {
         }
       }
 
-      // Update password
+      // Update password and name (if provided)
       await prisma.user.update({
         where: { id: user.id },
         data: {
           password: hashed,
+          name: nameRaw && typeof nameRaw === "string" && nameRaw.trim() ? nameRaw.trim() : user.name,
           magicLoginLastSentAt: now, // Reuse this field for rate limiting
         },
       });
     }
 
-    // Include flow in login URL if provided
+    // Generate magic token for auto-login
+    const magicToken = generateMagicToken();
+    const tokenHash = hashMagicToken(magicToken);
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+    // Store magic token in database
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        magicLoginTokenHash: tokenHash,
+        magicLoginExpiresAt: expiresAt,
+      },
+    });
+
+    // Include flow in URLs if provided
     const flow = req.body?.flow;
     let loginUrl = `${getFrontendBaseUrl()}/auth/login`;
+    let magicLinkUrl = `${getFrontendBaseUrl()}/auth/magic?token=${magicToken}`;
+    
     if (flow && typeof flow === "string") {
       loginUrl += `?flow=${encodeURIComponent(flow)}`;
+      magicLinkUrl += `&flow=${encodeURIComponent(flow)}`;
     }
-    await sendPasswordEmail({ to: email, password, loginUrl });
+    
+    await sendPasswordEmail({ to: email, password, loginUrl, magicLinkUrl });
 
     res.status(StatusCodes.OK).json({ 
       message: isNewUser 
