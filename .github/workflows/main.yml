@@ -50,8 +50,18 @@ jobs:
 
             sudo docker pull subhadeepthandaka/quiz-be:${{ github.ref_name }}
 
+            SUPABASE_IP=$(dig +short db.mfimptmujqalltgryglj.supabase.co A | head -1 || echo "")
+            if [ -n "$SUPABASE_IP" ]; then
+              echo "Resolved Supabase IPv4: $SUPABASE_IP"
+            else
+              echo "Warning: Could not resolve Supabase IPv4, will rely on DNS"
+            fi
+
             sudo docker run -d -p 3000:3000 \
               --name quiz-be \
+              --dns 8.8.8.8 \
+              --dns 8.8.4.4 \
+              $(if [ -n "$SUPABASE_IP" ]; then echo "--add-host=db.mfimptmujqalltgryglj.supabase.co:$SUPABASE_IP"; fi) \
               -e NODE_OPTIONS="--dns-result-order=ipv4first" \
               -e DATABASE_URL="${{ secrets.DATABASE_URL }}" \
               -e JWT_SECRET="${{ secrets.JWT_SECRET }}" \
