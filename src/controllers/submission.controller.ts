@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
 import { prisma } from "../db";
 import { AuthenticatedRequest } from "../middleware/middleware";
+import { logger } from "../utils/logger";
 
 export async function startSubmission(
   req: AuthenticatedRequest,
@@ -28,7 +29,7 @@ export async function startSubmission(
 
     res.status(StatusCodes.CREATED).json(submission);
   } catch (error) {
-    console.error(error);
+    logger.error("Error in startSubmission", error as Error, logger.getRequestContext(req));
     res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
       .json({ error: "Failed to create submission" });
@@ -43,6 +44,7 @@ export async function getAllSubmissions(req: Request, res: Response) {
     });
     res.json(submissions);
   } catch (error) {
+    logger.error("Error in getAllSubmissions", error as Error, logger.getRequestContext(req));
     res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
       .json({ error: "Failed to fetch submissions" });
@@ -66,7 +68,7 @@ export async function getUserSubmissions(req: Request, res: Response) {
 
     res.json(submissions);
   } catch (error) {
-    console.error(error);
+    logger.error("Error in getUserSubmissions", error as Error, logger.getRequestContext(req));
     res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
       .json({ error: "Failed to fetch user submissions" });
@@ -163,7 +165,7 @@ export async function getSubmissionByQuiz(
     });
     return
   } catch (error) {
-    console.error(error);
+    logger.error("Error in getSubmissionByQuiz", error as Error, logger.getRequestContext(req));
     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
       error: "Failed to fetch submission results",
     });
@@ -186,7 +188,7 @@ export async function completeSubmission(req: Request, res: Response) {
 
     res.json(updated);
   } catch (error) {
-    console.error(error);
+    logger.error("Error in completeSubmission", error as Error, logger.getRequestContext(req));
     res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
       .json({ error: "Failed to complete submission" });
@@ -199,6 +201,7 @@ export async function deleteSubmission(req: Request, res: Response) {
     await prisma.submission.delete({ where: { id } });
     res.status(StatusCodes.NO_CONTENT).send();
   } catch (error) {
+    logger.error("Error in deleteSubmission", error as Error, logger.getRequestContext(req));
     res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
       .json({ error: "Failed to delete submission" });

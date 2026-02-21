@@ -47,6 +47,12 @@ export function middleware(requiredRoles: Role[]) {
 
       next();
     } catch (error) {
+      // Import logger here to avoid circular dependency
+      const { logger } = require("../utils/logger");
+      logger.error("Error in authentication middleware", error as Error, {
+        route: req.path,
+        method: req.method,
+      });
       res.status(401).json({
         message: "Unauthorized: Token verification failed",
         error: (error as Error).message,

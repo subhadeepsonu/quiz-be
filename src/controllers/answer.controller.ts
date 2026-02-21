@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
 import { prisma } from "../db";
+import { logger } from "../utils/logger";
 
 export async function saveAnswer(req: Request, res: Response) {
   try {
@@ -34,7 +35,7 @@ export async function saveAnswer(req: Request, res: Response) {
 
     res.status(StatusCodes.OK).json(answer);
   } catch (error) {
-    console.error(error);
+    logger.error("Error in saveAnswer", error as Error, logger.getRequestContext(req));
     res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
       .json({ error: "Failed to save answer" });
@@ -51,7 +52,7 @@ export async function getAnswersBySubmission(req: Request, res: Response) {
 
     res.json(answers);
   } catch (error) {
-    console.error(error);
+    logger.error("Error in getAnswersBySubmission", error as Error, logger.getRequestContext(req));
     res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
       .json({ error: "Failed to fetch answers" });

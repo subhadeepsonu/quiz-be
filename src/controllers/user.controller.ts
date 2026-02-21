@@ -7,6 +7,7 @@ import jwt from "jsonwebtoken";
 import { registerValidator } from "../validator/auth.validator";
 import { AuthenticatedRequest } from "../middleware/middleware";
 import { computeEntitlements } from "../services/entitlements";
+import { logger } from "../utils/logger";
 
 export async function getAllUser(req: Request, res: Response) {
   try {
@@ -30,6 +31,7 @@ export async function getAllUser(req: Request, res: Response) {
     });
     return;
   } catch (error) {
+    logger.error("Error in getAllUser", error as Error, logger.getRequestContext(req));
     res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
       .json({ error: "Internal Server Error" });
@@ -60,6 +62,7 @@ export async function getMe(req: AuthenticatedRequest, res: Response) {
     });
     return;
   } catch (error) {
+    logger.error("Error in getMe", error as Error, logger.getRequestContext(req));
     res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
       .json({ error: "Internal Server Error" });
@@ -86,6 +89,7 @@ export async function getEntitlements(req: AuthenticatedRequest, res: Response) 
       data: entitlements,
     });
   } catch (error) {
+    logger.error("Error in getEntitlements", error as Error, logger.getRequestContext(req));
     res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
       .json({ error: "Internal Server Error" });
@@ -95,6 +99,7 @@ export async function getUser(req: Request, res: Response) {
   try {
     // TODO: implement logic
   } catch (error) {
+    logger.error("Error in getUser", error as Error, logger.getRequestContext(req));
     res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
       .json({ error: "Internal Server Error" });
@@ -158,6 +163,7 @@ export async function createUser(req: Request, res: Response) {
     });
     return;
   } catch (error) {
+    logger.error("Error in createUser", error as Error, logger.getRequestContext(req));
     res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
       .json({ error: "Internal Server Error" });
@@ -194,6 +200,7 @@ export async function ChangeRole(req: Request, res: Response) {
     });
     return;
   } catch (error) {
+    logger.error("Error in ChangeRole", error as Error, logger.getRequestContext(req));
     res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
       .json({ error: "Internal Server Error" });
@@ -227,6 +234,7 @@ export async function updateUser(req: Request, res: Response) {
     });
     return;
   } catch (error) {
+    logger.error("Error in updateUser", error as Error, logger.getRequestContext(req));
     res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
       .json({ error: "Internal Server Error" });
@@ -252,6 +260,7 @@ export async function deleteUser(req: Request, res: Response) {
     });
     return;
   } catch (error) {
+    logger.error("Error in deleteUser", error as Error, logger.getRequestContext(req));
     res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
       .json({ error: "Internal Server Error" });

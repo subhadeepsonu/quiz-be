@@ -5,6 +5,7 @@ import {
   PutObjectCommandInput,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { logger } from "../utils/logger";
 
 const bucketName = process.env.S3_BUCKET_NAME!;
 
@@ -44,7 +45,7 @@ export async function generatePresignedUrl(req: Request, res: Response) {
     });
     return;
   } catch (error) {
-    console.error("Error generating pre-signed URL:", error);
+    logger.error("Error generating pre-signed URL", error as Error, logger.getRequestContext(req));
     res.status(500).json({ error: "Internal Server Error" });
     return;
   }

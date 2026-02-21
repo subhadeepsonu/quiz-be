@@ -3,6 +3,7 @@ import { StatusCodes } from "http-status-codes";
 import { prisma } from "../db";
 import { AuthenticatedRequest } from "../middleware/middleware";
 import { computeEntitlements } from "../services/entitlements";
+import { logger } from "../utils/logger";
 
 export async function startTrial(req: AuthenticatedRequest, res: Response) {
   try {
@@ -48,7 +49,7 @@ export async function startTrial(req: AuthenticatedRequest, res: Response) {
     const updated = await computeEntitlements(userId);
     res.status(StatusCodes.OK).json({ message: "Trial started", data: updated });
   } catch (error) {
-    console.error(error);
+    logger.error("Error in startTrial", error as Error, logger.getRequestContext(req));
     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: "Internal Server Error" });
   }
 }

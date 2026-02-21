@@ -15,6 +15,9 @@ import { trialRouter } from "./routes/trial.route";
 import { runTrialExpirySweep } from "./services/trialExpiryJob";
 import { billingRouter } from "./routes/billing.route";
 import { stripeWebhook } from "./controllers/webhook.controller";
+import { errorHandler } from "./middleware/errorHandler";
+import { logger } from "./utils/logger";
+
 const app = express();
 dotenv.config();
 app.use(cors());
@@ -43,6 +46,9 @@ app.use("/upload", uploadRouter);
 app.use("/trial", trialRouter);
 app.use("/billing", billingRouter);
 
+// Error handler must be last middleware
+app.use(errorHandler);
+
 const port = process.env.PORT ? Number(process.env.PORT) : 3000;
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
@@ -51,5 +57,7 @@ app.listen(port, () => {
 // Lightweight cron (beta): email trial-ended users.
 // In production, move this to a separate worker/cron job.
 setInterval(() => {
-  runTrialExpirySweep().catch((err) => console.error("Trial expiry sweep failed:", err));
+  runTrialExpirySweep().catch((err) => {
+    logger.error("Trial expiry sweep failed", err as Error);
+  });
 }, 15 * 60_000);

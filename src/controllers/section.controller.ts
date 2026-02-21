@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
 import { prisma } from "../db";
 import { sectionValidator } from "../validator/section.validator";
+import { logger } from "../utils/logger";
 
 export async function getAllSection(req: Request, res: Response) {
   try {
@@ -16,6 +17,7 @@ export async function getAllSection(req: Request, res: Response) {
     });
     return;
   } catch (error) {
+    logger.error("Error in getAllSection", error as Error, logger.getRequestContext(req));
     res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
       .json({ error: "Internal Server Error" });
@@ -39,6 +41,7 @@ export async function getSectionById(req: Request, res: Response) {
     });
     return;
   } catch (error) {
+    logger.error("Error in getSectionById", error as Error, logger.getRequestContext(req));
     res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
       .json({ error: "Internal Server Error" });
@@ -68,6 +71,7 @@ export async function createSection(req: Request, res: Response) {
     });
     return;
   } catch (error) {
+    logger.error("Error in createSection", error as Error, logger.getRequestContext(req));
     res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
       .json({ error: "Internal Server Error" });
@@ -106,6 +110,7 @@ export async function updateSection(req: Request, res: Response) {
     });
     return;
   } catch (error) {
+    logger.error("Error in updateSection", error as Error, logger.getRequestContext(req));
     res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
       .json({ error: "Internal Server Error" });
@@ -132,6 +137,7 @@ export async function deleteSection(req: Request, res: Response) {
     });
     return;
   } catch (error) {
+    logger.error("Error in deleteSection", error as Error, logger.getRequestContext(req));
     res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
       .json({ error: "Internal Server Error" });

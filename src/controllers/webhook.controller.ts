@@ -3,6 +3,7 @@ import { StatusCodes } from "http-status-codes";
 import { prisma } from "../db";
 import { getStripe } from "../services/stripe";
 import { SubscriptionStatus } from "@prisma/client";
+import { logger } from "../utils/logger";
 
 function requiredEnv(name: string): string {
   const v = process.env[name];
@@ -73,7 +74,11 @@ export async function stripeWebhook(req: Request, res: Response) {
                   stripeSubscriptionId: paymentId ? String(paymentId) : null,
                 },
               }).catch((err) => {
-                console.error("Failed to create subscription from webhook:", err);
+                logger.error("Failed to create subscription from webhook", err as Error, {
+                  userId,
+                  planId,
+                  paymentId,
+                });
               });
             }
           }
@@ -149,7 +154,10 @@ export async function stripeWebhook(req: Request, res: Response) {
 
     res.json({ received: true });
   } catch (err) {
-    console.error(err);
+    logger.error("Error in stripeWebhook", err as Error, {
+      route: "/billing/webhook",
+      method: "POST",
+    });
     res.status(400).send(`Webhook Error: ${(err as Error).message}`);
   }
 }

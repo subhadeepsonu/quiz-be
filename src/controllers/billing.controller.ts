@@ -6,6 +6,7 @@ import { getStripe } from "../services/stripe";
 import { sendPasswordEmail } from "../services/email";
 import { generateMagicToken, hashMagicToken } from "../services/magicLogin";
 import bcrypt from "bcryptjs";
+import { logger } from "../utils/logger";
 
 function getFrontendBaseUrl(): string {
   return process.env.FRONTEND_BASE_URL || "https://ascensa-frontned.vercel.app";
@@ -88,7 +89,7 @@ export async function createCheckoutSession(req: AuthenticatedRequest, res: Resp
 
     res.status(StatusCodes.OK).json({ url: session.url });
   } catch (error) {
-    console.error(error);
+    logger.error("Error in createCheckoutSession", error as Error, logger.getRequestContext(req));
     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: "Internal Server Error" });
   }
 }
@@ -208,7 +209,7 @@ export async function createGuestCheckoutSession(req: Request, res: Response) {
         : "Redirecting to checkout..." 
     });
   } catch (error) {
-    console.error(error);
+    logger.error("Error in createGuestCheckoutSession", error as Error, logger.getRequestContext(req));
     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: "Internal Server Error" });
   }
 }
@@ -238,7 +239,7 @@ export async function createPortalSession(req: AuthenticatedRequest, res: Respon
 
     res.status(StatusCodes.OK).json({ url: session.url });
   } catch (error) {
-    console.error(error);
+    logger.error("Error in createPortalSession", error as Error, logger.getRequestContext(req));
     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: "Internal Server Error" });
   }
 }

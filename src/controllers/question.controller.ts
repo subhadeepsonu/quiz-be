@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
 import { prisma } from "../db";
 import { QuestionSchema, UpdateQuestionSchema } from "../validator/question.validator";
+import { logger } from "../utils/logger";
 
 export async function getAllQuestion(req: Request, res: Response) {
   try {
@@ -30,6 +31,7 @@ export async function getAllQuestion(req: Request, res: Response) {
     });
     return;
   } catch (error) {
+    logger.error("Error in getAllQuestion", error as Error, logger.getRequestContext(req));
     res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
       .json({ error: "Internal Server Error" });
@@ -60,6 +62,7 @@ export async function getQuestion(req: Request, res: Response) {
     });
     return;
   } catch (error) {
+    logger.error("Error in getQuestion", error as Error, logger.getRequestContext(req));
     res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
       .json({ error: "Internal Server Error" });
@@ -115,6 +118,7 @@ export async function createQuestion(req: Request, res: Response) {
     });
     return;
   } catch (error) {
+    logger.error("Error in createQuestion", error as Error, logger.getRequestContext(req));
     res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
       .json({ error: "Internal Server Error" });
@@ -180,6 +184,7 @@ export async function updateQuestion(req: Request, res: Response) {
     });
     return;
   } catch (error) {
+    logger.error("Error in updateQuestion", error as Error, logger.getRequestContext(req));
     res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
       .json({ error: "Internal Server Error" });
@@ -210,7 +215,7 @@ export async function deleteQuestion(req: Request, res: Response) {
     });
     return;
   } catch (error) {
-    console.log(error);
+    logger.error("Error in deleteQuestion", error as Error, logger.getRequestContext(req));
     res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
       .json({ error: "Internal Server Error" });
@@ -246,6 +251,7 @@ export async function getQuestionsByCategory(req: Request, res: Response) {
     });
     return;
   } catch (error) {
+    logger.error("Error in getQuestionsByCategory", error as Error, logger.getRequestContext(req));
     res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
       .json({ error: "Internal Server Error" });
@@ -280,6 +286,7 @@ export async function reorderQuestions(req: Request, res: Response) {
     });
     return;
   } catch (error) {
+    logger.error("Error in reorderQuestions", error as Error, logger.getRequestContext(req));
     res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
       .json({ error: "Internal Server Error" });

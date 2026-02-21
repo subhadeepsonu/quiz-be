@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
 import { prisma } from "../db";
 import { topicValidator } from "../validator/topic.validator";
+import { logger } from "../utils/logger";
 
 export async function getAllTopic(req: Request, res: Response) {
   try {
@@ -16,6 +17,7 @@ export async function getAllTopic(req: Request, res: Response) {
     });
     return;
   } catch (error) {
+    logger.error("Error in getAllTopic", error as Error, logger.getRequestContext(req));
     res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
       .json({ error: "Internal Server Error" });
@@ -45,6 +47,7 @@ export async function createTopic(req: Request, res: Response) {
     });
     return;
   } catch (error) {
+    logger.error("Error in createTopic", error as Error, logger.getRequestContext(req));
     res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
       .json({ error: "Internal Server Error" });
@@ -85,6 +88,7 @@ export async function updateTopic(req: Request, res: Response) {
     });
     return;
   } catch (error) {
+    logger.error("Error in updateTopic", error as Error, logger.getRequestContext(req));
     res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
       .json({ error: "Internal Server Error" });
@@ -111,6 +115,7 @@ export async function deleteTopic(req: Request, res: Response) {
     });
     return;
   } catch (error) {
+    logger.error("Error in deleteTopic", error as Error, logger.getRequestContext(req));
     res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
       .json({ error: "Internal Server Error" });

@@ -7,6 +7,7 @@ import { StatusCodes } from "http-status-codes";
 import { sendPasswordEmail } from "../services/email";
 import { generateMagicToken, hashMagicToken } from "../services/magicLogin";
 import { Role } from "@prisma/client";
+import { logger } from "../utils/logger";
 
 function signJwt(user: { id: string; role: Role }) {
   return jwt.sign(user, process.env.JWT_SECRET!, { expiresIn: "30d" });
@@ -73,6 +74,7 @@ export async function login(req: Request, res: Response) {
     });
     return;
   } catch (error) {
+    logger.error("Error in login", error as Error, logger.getRequestContext(req));
     res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
       .json({ error: "Internal Server Error" });
@@ -129,7 +131,7 @@ export async function adminLogin(req: Request, res: Response) {
     });
     return;
   } catch (error) {
-    console.log(error);
+    logger.error("Error in adminLogin", error as Error, logger.getRequestContext(req));
     res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
       .json({ error: "Internal Server Error" });
@@ -179,7 +181,7 @@ export async function register(req: Request, res: Response) {
     });
     return;
   } catch (error) {
-    console.log(error);
+    logger.error("Error in register", error as Error, logger.getRequestContext(req));
     res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
       .json({ error: "Internal Server Error" });
@@ -191,6 +193,7 @@ export async function verify(req: Request, res: Response) {
   try {
     // TODO: implement logic
   } catch (error) {
+    logger.error("Error in verify", error as Error, logger.getRequestContext(req));
     res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
       .json({ error: "Internal Server Error" });
@@ -202,6 +205,7 @@ export async function forgotPassword(req: Request, res: Response) {
   try {
     // TODO: implement logic
   } catch (error) {
+    logger.error("Error in forgotPassword", error as Error, logger.getRequestContext(req));
     res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
       .json({ error: "Internal Server Error" });
@@ -213,6 +217,7 @@ export async function verifyForgotPassword(req: Request, res: Response) {
   try {
     // TODO: implement logic
   } catch (error) {
+    logger.error("Error in verifyForgotPassword", error as Error, logger.getRequestContext(req));
     res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
       .json({ error: "Internal Server Error" });
@@ -309,7 +314,7 @@ export async function start(req: Request, res: Response) {
         : "If that email exists, we sent login credentials." 
     });
   } catch (error) {
-    console.error(error);
+    logger.error("Error in start (magic login)", error as Error, logger.getRequestContext(req));
     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: "Internal Server Error" });
   }
 }
@@ -353,7 +358,7 @@ export async function verifyMagic(req: Request, res: Response) {
     const jwtToken = signJwt({ id: user.id, role: user.role });
     res.status(StatusCodes.OK).json({ message: "Login successful", token: jwtToken });
   } catch (error) {
-    console.error(error);
+    logger.error("Error in verifyMagic", error as Error, logger.getRequestContext(req));
     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: "Internal Server Error" });
   }
 }

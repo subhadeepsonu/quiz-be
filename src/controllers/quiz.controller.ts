@@ -4,6 +4,7 @@ import { prisma } from "../db";
 import { QuizPatchValidator, QuizValidator } from "../validator/quiz.validator";
 import { TestCategory, TestSubCategory } from "@prisma/client";
 import { AuthenticatedRequest } from "../middleware/middleware";
+import { logger } from "../utils/logger";
 
 export async function getAllQuiz(req: AuthenticatedRequest, res: Response) {
   try {
@@ -49,7 +50,7 @@ export async function getAllQuiz(req: AuthenticatedRequest, res: Response) {
     });
     return;
   } catch (error) {
-    console.log(error)
+    logger.error("Error in getAllQuiz", error as Error, logger.getRequestContext(req));
     res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
       .json({ error: "Internal Server Error" });
@@ -89,7 +90,7 @@ export async function getQuiz(req: Request, res: Response) {
     });
     return;
   } catch (error) {
-    console.log(error)
+    logger.error("Error in getQuiz", error as Error, logger.getRequestContext(req));
     res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
       .json({ error: "Internal Server Error" });
@@ -127,7 +128,7 @@ export async function createQuiz(req: Request, res: Response) {
     });
     return;
   } catch (error) {
-    console.log(error);
+    logger.error("Error in createQuiz", error as Error, logger.getRequestContext(req));
     res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
       .json({ error: "Internal Server Error" });
@@ -168,6 +169,7 @@ export async function updateQuiz(req: Request, res: Response) {
     });
     return;
   } catch (error) {
+    logger.error("Error in updateQuiz", error as Error, logger.getRequestContext(req));
     res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
       .json({ error: "Internal Server Error" });
@@ -198,6 +200,7 @@ export async function TriggerActive(req: Request, res: Response) {
     });
     return;
   } catch (error) {
+    logger.error("Error in TriggerActive", error as Error, logger.getRequestContext(req));
     res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
       .json({ error: "Internal Server Error" });
@@ -231,6 +234,7 @@ export async function reorderQuiz(req: Request, res: Response) {
     return;
 
   } catch (error) {
+    logger.error("Error in reorderQuiz", error as Error, logger.getRequestContext(req));
     res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
       .json({ error: "Internal Server Error" });
@@ -262,6 +266,7 @@ export async function deleteQuiz(req: Request, res: Response) {
     });
     return;
   } catch (error) {
+    logger.error("Error in deleteQuiz", error as Error, logger.getRequestContext(req));
     res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
       .json({ error: "Internal Server Error" });

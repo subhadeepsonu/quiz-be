@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
 import { prisma } from "../db";
 import { PlanValidator } from "../validator/plan.validator";
+import { logger } from "../utils/logger";
 
 export async function getAllPlan(req: Request, res: Response) {
   try {
@@ -16,6 +17,7 @@ export async function getAllPlan(req: Request, res: Response) {
     });
     return;
   } catch (error) {
+    logger.error("Error in getAllPlan", error as Error, logger.getRequestContext(req));
     res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
       .json({ error: "Internal Server Error" });
@@ -48,6 +50,7 @@ export async function createPlan(req: Request, res: Response) {
     });
     return;
   } catch (error) {
+    logger.error("Error in createPlan", error as Error, logger.getRequestContext(req));
     res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
       .json({ error: "Internal Server Error" });
@@ -96,6 +99,7 @@ export async function updatePlan(req: Request, res: Response) {
     });
     return;
   } catch (error) {
+    logger.error("Error in updatePlan", error as Error, logger.getRequestContext(req));
     res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
       .json({ error: "Internal Server Error" });
@@ -131,6 +135,7 @@ export async function deletePlan(req: Request, res: Response) {
     });
     return;
   } catch (error) {
+    logger.error("Error in deletePlan", error as Error, logger.getRequestContext(req));
     res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
       .json({ error: "Internal Server Error" });
