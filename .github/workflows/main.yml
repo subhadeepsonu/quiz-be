@@ -52,6 +52,7 @@ jobs:
 
             sudo docker run -d -p 3000:3000 \
               --name quiz-be \
+              -e NODE_OPTIONS="--dns-result-order=ipv4first" \
               -e DATABASE_URL="${{ secrets.DATABASE_URL }}" \
               -e JWT_SECRET="${{ secrets.JWT_SECRET }}" \
               -e NEXT_PUBLIC_SUPABASE_URL="${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}" \
