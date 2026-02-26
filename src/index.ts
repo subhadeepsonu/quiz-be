@@ -14,6 +14,7 @@ import dotenv from "dotenv";
 import { trialRouter } from "./routes/trial.route";
 import { runTrialExpirySweep } from "./services/trialExpiryJob";
 import { billingRouter } from "./routes/billing.route";
+import { contactRouter } from "./routes/contact.route";
 import { stripeWebhook } from "./controllers/webhook.controller";
 import { errorHandler } from "./middleware/errorHandler";
 import { logger } from "./utils/logger";
@@ -45,6 +46,7 @@ app.use("/topic", topicRouter);
 app.use("/upload", uploadRouter);
 app.use("/trial", trialRouter);
 app.use("/billing", billingRouter);
+app.use("/contact", contactRouter);
 
 // Error handler must be last middleware
 app.use(errorHandler);
