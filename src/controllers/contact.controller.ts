@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
 import { logger } from "../utils/logger";
-import { getMailer, requiredEnv } from "../services/email";
+import { getMailer } from "../services/email";
 
 export async function submitContact(req: Request, res: Response) {
   try {
