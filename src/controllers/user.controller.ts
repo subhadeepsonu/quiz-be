@@ -252,9 +252,25 @@ export async function deleteUser(req: Request, res: Response) {
       res.status(StatusCodes.NOT_FOUND).json({ error: "User not found" });
       return;
     }
-    await prisma.user.delete({
-      where: { id: userId },
+
+    // Delete user-related data in a safe order inside a transaction:
+    // 1. Delete submissions (will cascade to SubmittedAnswer via schema)
+    // 2. Delete subscriptions
+    // 3. Delete the user record itself
+    await prisma.$transaction(async (tx) => {
+      await tx.submission.deleteMany({
+        where: { userId },
+      });
+
+      await tx.subscription.deleteMany({
+        where: { userId },
+      });
+
+      await tx.user.delete({
+        where: { id: userId },
+      });
     });
+
     res.status(StatusCodes.OK).json({
       message: "User deleted successfully",
     });

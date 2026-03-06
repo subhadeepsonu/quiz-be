@@ -29,7 +29,10 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "nodemon --exec ts-node src/index.ts",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "sync:mocks": "ts-node src/scripts/syncMocks.ts",
+    "hash-password": "ts-node src/scripts/hashPassword.ts",
+    "delete:all-users": "ts-node src/scripts/deleteAllUsers.ts"
   },
   "keywords": [],
   "author": "",
