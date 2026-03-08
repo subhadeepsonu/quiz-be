@@ -66,7 +66,9 @@ export const QuestionSchema = z
     twoPartAnalysisData: z.object({
       correctPart1Option: z.number(),
       correctPart2Option: z.number(),
-      options: z.array(z.string())
+      options: z.array(z.string()),
+      label1: z.string().optional(),
+      label2: z.string().optional(),
     }).optional(),
     paragraphText: z.string().optional(),
     optionA: z.string().optional().nullable(),

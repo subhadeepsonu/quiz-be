@@ -170,6 +170,7 @@ export async function updateQuestion(req: Request, res: Response) {
         caseStudyData: check.data.caseStudyData || undefined,
         blankOptions: check.data.blankOptions || undefined,
         subQuestions: check.data.subQuestions || undefined,
+        twoPartAnalysisData: check.data.twoPartAnalysisData || undefined,
         points: check.data.points || 1,
         orderIndex: check.data.orderIndex || 0,
         sectionId: check.data.sectionId,
