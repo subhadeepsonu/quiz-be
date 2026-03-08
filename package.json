@@ -32,7 +32,8 @@
     "start": "node dist/index.js",
     "sync:mocks": "ts-node src/scripts/syncMocks.ts",
     "hash-password": "ts-node src/scripts/hashPassword.ts",
-    "delete:all-users": "ts-node src/scripts/deleteAllUsers.ts"
+    "delete:all-users": "ts-node src/scripts/deleteAllUsers.ts",
+    "create-user": "ts-node src/scripts/createUser.ts"
   },
   "keywords": [],
   "author": "",

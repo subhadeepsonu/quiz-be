@@ -57,6 +57,8 @@ enum TopicEnum {
   PARADOX
   INFERENCE
   ASSUMPTIONS
+  EVALUATE
+  BOLDFACE
 
   // Quantitative Reasoning
   ARITHMETIC
