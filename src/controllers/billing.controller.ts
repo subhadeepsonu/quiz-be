@@ -111,55 +111,47 @@ export async function createGuestCheckoutSession(req: Request, res: Response) {
 
     const email = normalizeEmail(emailRaw);
     const nameRaw = req.body?.name;
-    const name = nameRaw && typeof nameRaw === "string" && nameRaw.trim() 
-      ? nameRaw.trim() 
+    const name = nameRaw && typeof nameRaw === "string" && nameRaw.trim()
+      ? nameRaw.trim()
       : email.split("@")[0] || "User";
-    
-    // Find or create user
-    let user = await prisma.user.findUnique({ where: { email } });
-    let isNewUser = false;
-    
-    if (!user) {
-      // Create account with random password
-      const password = randomPassword();
-      const hashed = bcrypt.hashSync(password, 10);
-      
-      user = await prisma.user.create({
-        data: {
-          email,
-          name,
-          password: hashed,
-          role: "user",
-        },
-      });
-      isNewUser = true;
-      
-      // Generate magic token for auto-login
-      const magicToken = generateMagicToken();
-      const tokenHash = hashMagicToken(magicToken);
-      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
-      // Store magic token in database
-      await prisma.user.update({
-        where: { id: user.id },
-        data: {
-          magicLoginTokenHash: tokenHash,
-          magicLoginExpiresAt: expiresAt,
-        },
+    const existingUser = await prisma.user.findUnique({ where: { email } });
+    if (existingUser) {
+      res.status(StatusCodes.CONFLICT).json({
+        error: "This email is already registered. Please sign in to purchase.",
       });
-
-      // Create login URLs with checkout flow
-      const loginUrl = `${getFrontendBaseUrl()}/auth/login?checkout=true&email=${encodeURIComponent(email)}`;
-      const magicLinkUrl = `${getFrontendBaseUrl()}/auth/magic?token=${magicToken}&flow=purchase`;
-      
-      await sendPasswordEmail({ to: email, password, loginUrl, magicLinkUrl });
-    } else if (user && nameRaw && typeof nameRaw === "string" && nameRaw.trim()) {
-      // Update existing user's name if provided
-      await prisma.user.update({
-        where: { id: user.id },
-        data: { name: nameRaw.trim() },
-      });
+      return;
     }
+
+    // Create account with random password
+    const password = randomPassword();
+    const hashed = bcrypt.hashSync(password, 10);
+
+    const user = await prisma.user.create({
+      data: {
+        email,
+        name,
+        password: hashed,
+        role: "user",
+      },
+    });
+
+    const magicToken = generateMagicToken();
+    const tokenHash = hashMagicToken(magicToken);
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        magicLoginTokenHash: tokenHash,
+        magicLoginExpiresAt: expiresAt,
+      },
+    });
+
+    const loginUrl = `${getFrontendBaseUrl()}/auth/login?checkout=true&email=${encodeURIComponent(email)}`;
+    const magicLinkUrl = `${getFrontendBaseUrl()}/auth/magic?token=${magicToken}&flow=purchase`;
+
+    await sendPasswordEmail({ to: email, password, loginUrl, magicLinkUrl });
 
     // Get plan
     const plan = await prisma.plan.findUnique({ where: { id: planId } });
@@ -202,11 +194,9 @@ export async function createGuestCheckoutSession(req: Request, res: Response) {
       cancel_url: `${getFrontendBaseUrl()}/pricing?checkout=cancel`,
     });
 
-    res.status(StatusCodes.OK).json({ 
+    res.status(StatusCodes.OK).json({
       url: session.url,
-      message: isNewUser 
-        ? "Account created! Check your email for login credentials." 
-        : "Redirecting to checkout..." 
+      message: "Account created! Check your email for login credentials.",
     });
   } catch (error) {
     logger.error("Error in createGuestCheckoutSession", error as Error, logger.getRequestContext(req));

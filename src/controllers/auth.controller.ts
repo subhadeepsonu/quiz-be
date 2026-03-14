@@ -235,83 +235,56 @@ export async function start(req: Request, res: Response) {
 
     const email = normalizeEmail(emailRaw);
     const nameRaw = req.body?.name;
-    const name = nameRaw && typeof nameRaw === "string" && nameRaw.trim() 
-      ? nameRaw.trim() 
+    const name = nameRaw && typeof nameRaw === "string" && nameRaw.trim()
+      ? nameRaw.trim()
       : email.split("@")[0] || "User";
-    const now = new Date();
 
-    let user = await prisma.user.findUnique({ where: { email } });
-    let password: string;
-    let isNewUser = false;
+    const user = await prisma.user.findUnique({ where: { email } });
 
-    if (!user) {
-      // Create new user with random password
-      password = randomPassword();
-      const hashed = bcrypt.hashSync(password, 10);
-      user = await prisma.user.create({
-        data: {
-          email,
-          name,
-          password: hashed,
-          role: "user",
-        },
+    if (user) {
+      res.status(StatusCodes.CONFLICT).json({
+        error: "This email is already registered. Please sign in or use Forgot password.",
       });
-      isNewUser = true;
-    } else {
-      // Existing user - generate new password and update name if provided
-      password = randomPassword();
-      const hashed = bcrypt.hashSync(password, 10);
-      
-      // Simple anti-spam: one email per 60s per account
-      if (user.magicLoginLastSentAt) {
-        const diffMs = now.getTime() - new Date(user.magicLoginLastSentAt).getTime();
-        if (diffMs < 60_000) {
-          res.status(StatusCodes.OK).json({ message: "If that email exists, we sent login credentials." });
-          return;
-        }
-      }
-
-      // Update password and name (if provided)
-      await prisma.user.update({
-        where: { id: user.id },
-        data: {
-          password: hashed,
-          name: nameRaw && typeof nameRaw === "string" && nameRaw.trim() ? nameRaw.trim() : user.name,
-          magicLoginLastSentAt: now, // Reuse this field for rate limiting
-        },
-      });
+      return;
     }
+
+    // Create new user with random password
+    const password = randomPassword();
+    const hashed = bcrypt.hashSync(password, 10);
+    const newUser = await prisma.user.create({
+      data: {
+        email,
+        name,
+        password: hashed,
+        role: "user",
+      },
+    });
 
     // Generate magic token for auto-login
     const magicToken = generateMagicToken();
     const tokenHash = hashMagicToken(magicToken);
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
-    // Store magic token in database
     await prisma.user.update({
-      where: { id: user.id },
+      where: { id: newUser.id },
       data: {
         magicLoginTokenHash: tokenHash,
         magicLoginExpiresAt: expiresAt,
       },
     });
 
-    // Include flow in URLs if provided
     const flow = req.body?.flow;
     let loginUrl = `${getFrontendBaseUrl()}/auth/login`;
     let magicLinkUrl = `${getFrontendBaseUrl()}/auth/magic?token=${magicToken}`;
-    
     if (flow && typeof flow === "string") {
       loginUrl += `?flow=${encodeURIComponent(flow)}`;
       magicLinkUrl += `&flow=${encodeURIComponent(flow)}`;
     }
-    
+
     await sendPasswordEmail({ to: email, password, loginUrl, magicLinkUrl });
 
-    res.status(StatusCodes.OK).json({ 
-      message: isNewUser 
-        ? "Account created! Check your email for login credentials." 
-        : "If that email exists, we sent login credentials." 
+    res.status(StatusCodes.OK).json({
+      message: "Account created! Check your email for login credentials.",
     });
   } catch (error) {
     logger.error("Error in start (magic login)", error as Error, logger.getRequestContext(req));
