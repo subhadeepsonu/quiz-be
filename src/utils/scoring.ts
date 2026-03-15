@@ -69,28 +69,39 @@ function checkTableWithOptionsCorrectness(selectedOptions: string[], tableData: 
 }
 
 function checkCaseStudyCorrectness(selectedOptions: string[], caseStudyData: any): boolean {
+  return checkCaseStudyCorrectnessWithDetails(selectedOptions, caseStudyData).isCorrect;
+}
+
+/** Returns per-sub-question correctness (matches frontend getFlattenedQuestionCounts). */
+function checkCaseStudyCorrectnessWithDetails(
+  selectedOptions: string[],
+  caseStudyData: any
+): { isCorrect: boolean; details: Record<string, { isCorrect: boolean }> } {
   const parsed = parseSelectedOptions(selectedOptions) as Record<string, unknown> | null;
-  if (!parsed || !caseStudyData?.questions) return false;
+  const details: Record<string, { isCorrect: boolean }> = {};
+  if (!parsed || !caseStudyData?.questions) return { isCorrect: false, details };
   const questions = caseStudyData.questions as any[];
-  return questions.every((q: any, index: number) => {
+  let allCorrect = true;
+  questions.forEach((q: any, index: number) => {
     const qKey = `q${index}`;
     const selected = parsed[qKey];
-    if (q.type === "singleCorrect") return selected === q.correctOption;
-    if (q.type === "multipleCorrect") {
+    let isCorrect = false;
+    if (q.type === "singleCorrect") isCorrect = selected === q.correctOption;
+    else if (q.type === "multipleCorrect") {
       const selectedSet = new Set(Array.isArray(selected) ? selected : []);
       const correctSet = new Set(q.correctOptions || []);
-      return selectedSet.size === correctSet.size && [...selectedSet].every((opt) => correctSet.has(opt));
-    }
-    if (q.type === "2PA") {
+      isCorrect = selectedSet.size === correctSet.size && [...selectedSet].every((opt) => correctSet.has(opt));
+    } else if (q.type === "2PA") {
       const sel = selected as { part1?: number; part2?: number } | undefined;
-      return sel?.part1 === q.correctPart1Option && sel?.part2 === q.correctPart2Option;
+      isCorrect = sel?.part1 === q.correctPart1Option && sel?.part2 === q.correctPart2Option;
+    } else if (q.type === "multiBoolean") {
+      if (q.subQuestions && selected)
+        isCorrect = (q.subQuestions as any[]).every((subQ: any, subIdx: number) => (selected as any)[`sub${subIdx}`] === subQ.correct);
     }
-    if (q.type === "multiBoolean") {
-      if (!q.subQuestions || !selected) return false;
-      return (q.subQuestions as any[]).every((subQ: any, subIdx: number) => (selected as any)[`sub${subIdx}`] === subQ.correct);
-    }
-    return false;
+    if (!isCorrect) allCorrect = false;
+    details[qKey] = { isCorrect };
   });
+  return { isCorrect: allCorrect, details };
 }
 
 /** Check if a single answer is correct (same logic as frontend checkAnswerCorrectness). */
@@ -131,10 +142,11 @@ export function checkAnswerCorrectness(answer: { question: any; selectedOptions:
   }
 }
 
-/** Total score formula: 205 + 20*(avgSectionScore - 60), rounded to nearest 10+5, clamped 205–805. */
+/** Total score formula: 205 + 20*(avgSectionScore - 60), rounded up to next band ending in 5, clamped 205–805. */
 export function computeTotalScore(avgSectionScore: number): number {
   const raw = 205 + 20 * (avgSectionScore - 60);
-  const rounded = Math.round(raw / 10) * 10 + 5;
+  const roundedToTen = Math.ceil(raw / 10) * 10;
+  const rounded = roundedToTen % 10 === 0 ? roundedToTen + 5 : roundedToTen;
   return Math.min(805, Math.max(205, rounded));
 }
 
@@ -146,24 +158,42 @@ export interface SubmissionScoreResult {
 }
 
 /**
+ * Flattened question count: case study sub-questions count as individual questions
+ * (same as frontend getFlattenedQuestionCounts / analysis page).
+ */
+function getFlattenedQuestionCounts(answers: Array<{ question: any; selectedOptions: string[] }>): { total: number; correct: number } {
+  let total = 0;
+  let correct = 0;
+  for (const a of answers) {
+    const q = a.question;
+    if (q?.questionType === "caseStudy" && q?.caseStudyData?.questions?.length) {
+      const { details } = checkCaseStudyCorrectnessWithDetails(a.selectedOptions || [], q.caseStudyData);
+      const subQuestions = q.caseStudyData.questions as any[];
+      subQuestions.forEach((_: any, subIdx: number) => {
+        total++;
+        const qKey = `q${subIdx}`;
+        if (details[qKey]?.isCorrect) correct++;
+      });
+    } else {
+      total++;
+      if (checkAnswerCorrectness({ question: a.question, selectedOptions: a.selectedOptions })) correct++;
+    }
+  }
+  return { total, correct };
+}
+
+/**
  * Compute totalScore and aggregates from submission answers.
- * Uses same accuracy -> avgSectionScore -> totalScore logic as frontend.
+ * Uses flattened counts (case study = multiple questions) to match frontend analysis page.
  */
 export function computeSubmissionScores(answers: Array<{ question: any; selectedOptions: string[]; timeTakenSec: number | null }>): SubmissionScoreResult | null {
   if (!answers.length) return null;
 
-  let correct = 0;
-  let incorrect = 0;
-  let timeSpentSec = 0;
+  const { total, correct } = getFlattenedQuestionCounts(answers);
+  const incorrect = total - correct;
 
-  for (const a of answers) {
-    const isCorrect = checkAnswerCorrectness({ question: a.question, selectedOptions: a.selectedOptions });
-    if (isCorrect) correct += 1;
-    else incorrect += 1;
-    timeSpentSec += a.timeTakenSec != null ? Number(a.timeTakenSec) : 0;
-  }
+  const timeSpentSec = answers.reduce((sum, a) => sum + (a.timeTakenSec != null ? Number(a.timeTakenSec) : 0), 0);
 
-  const total = correct + incorrect;
   const accuracy = total > 0 ? (correct / total) * 100 : 0;
   const avgSectionScore = 60 + (accuracy / 100) * 30;
   const totalScore = computeTotalScore(avgSectionScore);
