@@ -3,6 +3,7 @@ import { StatusCodes } from "http-status-codes";
 import { prisma } from "../db";
 import { AuthenticatedRequest } from "../middleware/middleware";
 import { logger } from "../utils/logger";
+import { computeSubmissionScores } from "../utils/scoring";
 
 export async function startSubmission(
   req: AuthenticatedRequest,
@@ -178,12 +179,47 @@ export async function completeSubmission(req: Request, res: Response) {
   try {
     const { id } = req.params;
 
+    const submissionWithAnswers = await prisma.submission.findUnique({
+      where: { id },
+      include: {
+        answers: { include: { question: true } },
+      },
+    });
+
+    if (!submissionWithAnswers) {
+      res.status(StatusCodes.NOT_FOUND).json({ error: "Submission not found" });
+      return;
+    }
+
+    const scoreResult = computeSubmissionScores(
+      submissionWithAnswers.answers.map((a) => ({
+        question: a.question,
+        selectedOptions: a.selectedOptions,
+        timeTakenSec: a.timeTakenSec,
+      }))
+    );
+
+    const updateData: {
+      status: "completed";
+      endedAt: Date;
+      totalScore?: number;
+      correctAnswers?: number;
+      incorrectAnswers?: number;
+      timeSpentSec?: number;
+    } = {
+      status: "completed",
+      endedAt: new Date(),
+    };
+    if (scoreResult) {
+      updateData.totalScore = scoreResult.totalScore;
+      updateData.correctAnswers = scoreResult.correctAnswers;
+      updateData.incorrectAnswers = scoreResult.incorrectAnswers;
+      updateData.timeSpentSec = scoreResult.timeSpentSec;
+    }
+
     const updated = await prisma.submission.update({
       where: { id },
-      data: {
-        status: "completed",
-        endedAt: new Date(),
-      },
+      data: updateData,
     });
 
     res.json(updated);
