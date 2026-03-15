@@ -8,6 +8,7 @@ import {
   getMe,
   ChangeRole,
   getEntitlements,
+  changePassword,
 } from "../controllers/user.controller";
 import { middleware } from "../middleware/middleware";
 
@@ -15,6 +16,7 @@ export const userRouter = Router();
 
 userRouter.get("/", middleware(["admin"]), getAllUser);
 userRouter.get("/me", middleware(["user", "admin", "editor"]), getMe);
+userRouter.put("/me/password", middleware(["user", "admin", "editor"]), changePassword);
 userRouter.get(
   "/entitlements",
   middleware(["user", "admin", "editor"]),

@@ -126,6 +126,58 @@ const LOGIN_CREDENTIALS_HTML = (opts: {
 </body>
 </html>`;
 
+const PASSWORD_RESET_HTML = (opts: { resetUrl: string; logoUrl: string }) => `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reset your Ascensa password</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #F5F0E8; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
+    <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #F5F0E8; padding: 40px 20px;">
+        <tr>
+            <td align="center">
+                <table border="0" cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 15px rgba(27, 42, 74, 0.1);">
+                    <tr>
+                        <td align="center" style="background-color: #1B2A4A; padding: 40px 20px;">
+                            <img src="${opts.logoUrl}" alt="Ascensa Prep" width="180" style="display: block; border: 0;" />
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 40px; color: #333333;">
+                            <h1 style="margin: 0 0 20px 0; font-size: 24px; color: #1B2A4A;">Reset your password</h1>
+                            <p style="margin: 0 0 24px 0; font-size: 16px; line-height: 1.6;">Click the button below to set a new password. This link expires in 1 hour.</p>
+                            <p style="margin: 0 0 24px 0;">
+                                <a href="${opts.resetUrl}" style="display: inline-block; background-color: #E8761A; color: #ffffff; font-size: 16px; font-weight: bold; text-decoration: none; padding: 14px 32px; border-radius: 4px;">Reset password</a>
+                            </p>
+                            <p style="margin: 0; font-size: 14px; color: #777777;">If you didn't request this, you can ignore this email.</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="background-color: #1B2A4A; padding: 20px; text-align: center;">
+                            <p style="margin: 0; font-size: 12px; color: #F5F0E8; opacity: 0.8;">&copy; 2026 Ascensa Prep. All rights reserved.</p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>`;
+
+export async function sendPasswordResetEmail(opts: { to: string; resetUrl: string }) {
+  const from = process.env.EMAIL_FROM || process.env.SMTP_USER;
+  if (!from) throw new Error("Missing EMAIL_FROM or SMTP_USER");
+  const transporter = getMailer();
+  await transporter.sendMail({
+    from,
+    to: opts.to,
+    subject: "Reset your Ascensa Prep password",
+    text: `Reset your password by visiting: ${opts.resetUrl}\n\nThis link expires in 1 hour. If you didn't request this, ignore this email.`,
+    html: PASSWORD_RESET_HTML({ resetUrl: opts.resetUrl, logoUrl: getEmailLogoUrl() }),
+  });
+}
+
 export async function sendPasswordEmail(opts: { to: string; password: string; loginUrl: string; magicLinkUrl?: string }) {
   const from = process.env.EMAIL_FROM || process.env.SMTP_USER;
   if (!from) throw new Error("Missing EMAIL_FROM or SMTP_USER");

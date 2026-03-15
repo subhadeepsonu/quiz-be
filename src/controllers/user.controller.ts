@@ -5,6 +5,7 @@ import { Role } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { registerValidator } from "../validator/auth.validator";
+import { changePasswordValidator } from "../validator/auth.validator";
 import { AuthenticatedRequest } from "../middleware/middleware";
 import { computeEntitlements } from "../services/entitlements";
 import { logger } from "../utils/logger";
@@ -48,6 +49,7 @@ export async function getMe(req: AuthenticatedRequest, res: Response) {
         role: true,
         name: true,
         email: true,
+        createdAt: true,
       },
     });
     if (!me) {
@@ -95,6 +97,37 @@ export async function getEntitlements(req: AuthenticatedRequest, res: Response) 
       .json({ error: "Internal Server Error" });
   }
 }
+export async function changePassword(req: AuthenticatedRequest, res: Response) {
+  try {
+    const userId = req.userId;
+    if (!userId) {
+      res.status(StatusCodes.UNAUTHORIZED).json({ error: "Unauthorized" });
+      return;
+    }
+    const check = changePasswordValidator.safeParse(req.body);
+    if (!check.success) {
+      res.status(StatusCodes.BAD_REQUEST).json({ error: "Current password and new password (min 8 characters) are required", details: check.error.errors });
+      return;
+    }
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { password: true } });
+    if (!user) {
+      res.status(StatusCodes.NOT_FOUND).json({ error: "User not found" });
+      return;
+    }
+    const valid = bcrypt.compareSync(check.data.currentPassword, user.password);
+    if (!valid) {
+      res.status(StatusCodes.UNAUTHORIZED).json({ error: "Current password is incorrect" });
+      return;
+    }
+    const hashed = bcrypt.hashSync(check.data.newPassword, 10);
+    await prisma.user.update({ where: { id: userId }, data: { password: hashed } });
+    res.status(StatusCodes.OK).json({ message: "Password updated successfully." });
+  } catch (error) {
+    logger.error("Error in changePassword", error as Error, logger.getRequestContext(req));
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: "Internal Server Error" });
+  }
+}
+
 export async function getUser(req: Request, res: Response) {
   try {
     // TODO: implement logic

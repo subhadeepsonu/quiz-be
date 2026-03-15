@@ -123,6 +123,10 @@ model User {
   magicLoginTokenHash     String?
   magicLoginExpiresAt     DateTime?
   magicLoginLastSentAt    DateTime?
+
+  // Password reset
+  passwordResetTokenHash  String?
+  passwordResetExpiresAt  DateTime?
 }
 
 model Plan {

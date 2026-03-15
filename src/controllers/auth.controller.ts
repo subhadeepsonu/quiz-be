@@ -1,10 +1,10 @@
 import { Request, Response } from "express";
-import { loginValidator, registerValidator } from "../validator/auth.validator";
+import { loginValidator, registerValidator, forgotPasswordValidator, verifyForgotPasswordValidator } from "../validator/auth.validator";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { prisma } from "../db";
 import { StatusCodes } from "http-status-codes";
-import { sendPasswordEmail } from "../services/email";
+import { sendPasswordEmail, sendPasswordResetEmail } from "../services/email";
 import { generateMagicToken, hashMagicToken } from "../services/magicLogin";
 import { Role } from "@prisma/client";
 import { logger } from "../utils/logger";
@@ -203,25 +203,61 @@ export async function verify(req: Request, res: Response) {
 
 export async function forgotPassword(req: Request, res: Response) {
   try {
-    // TODO: implement logic
+    const check = forgotPasswordValidator.safeParse(req.body);
+    if (!check.success) {
+      res.status(StatusCodes.BAD_REQUEST).json({ error: "Valid email is required", details: check.error.errors });
+      return;
+    }
+    const email = normalizeEmail(check.data.email);
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) {
+      res.status(StatusCodes.OK).json({ message: "If that email is registered, you will receive a password reset link." });
+      return;
+    }
+    const token = generateMagicToken();
+    const tokenHash = hashMagicToken(token);
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { passwordResetTokenHash: tokenHash, passwordResetExpiresAt: expiresAt },
+    });
+    const resetUrl = `${getFrontendBaseUrl()}/auth/reset-password?token=${encodeURIComponent(token)}`;
+    await sendPasswordResetEmail({ to: email, resetUrl });
+    res.status(StatusCodes.OK).json({ message: "If that email is registered, you will receive a password reset link." });
   } catch (error) {
     logger.error("Error in forgotPassword", error as Error, logger.getRequestContext(req));
-    res
-      .status(StatusCodes.INTERNAL_SERVER_ERROR)
-      .json({ error: "Internal Server Error" });
-    return;
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: "Internal Server Error" });
   }
 }
 
 export async function verifyForgotPassword(req: Request, res: Response) {
   try {
-    // TODO: implement logic
+    const check = verifyForgotPasswordValidator.safeParse(req.body);
+    if (!check.success) {
+      res.status(StatusCodes.BAD_REQUEST).json({ error: "Token and new password (min 8 characters) are required", details: check.error.errors });
+      return;
+    }
+    const tokenHash = hashMagicToken(check.data.token);
+    const now = new Date();
+    const user = await prisma.user.findFirst({
+      where: {
+        passwordResetTokenHash: tokenHash,
+        passwordResetExpiresAt: { gt: now },
+      },
+    });
+    if (!user) {
+      res.status(StatusCodes.BAD_REQUEST).json({ error: "Invalid or expired reset link. Please request a new one." });
+      return;
+    }
+    const hashed = bcrypt.hashSync(check.data.newPassword, 10);
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { password: hashed, passwordResetTokenHash: null, passwordResetExpiresAt: null },
+    });
+    res.status(StatusCodes.OK).json({ message: "Password updated. You can now sign in with your new password." });
   } catch (error) {
     logger.error("Error in verifyForgotPassword", error as Error, logger.getRequestContext(req));
-    res
-      .status(StatusCodes.INTERNAL_SERVER_ERROR)
-      .json({ error: "Internal Server Error" });
-    return;
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: "Internal Server Error" });
   }
 }
 
