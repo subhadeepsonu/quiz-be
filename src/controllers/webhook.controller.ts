@@ -37,7 +37,7 @@ export async function stripeWebhook(req: Request, res: Response) {
         const paymentMode = session?.mode; // "payment" for one-time, "subscription" for recurring
         
         if (userId && planId) {
-          // Get the plan to calculate end date based on duration
+          // Get the plan to calculate extension duration
           const plan = await prisma.plan.findUnique({
             where: { id: planId },
             select: { duration: true },
@@ -45,41 +45,69 @@ export async function stripeWebhook(req: Request, res: Response) {
 
           if (plan) {
             const now = new Date();
-            // Calculate end date: start date + plan duration (in months)
-            const endDate = new Date(now);
-            endDate.setMonth(endDate.getMonth() + plan.duration);
-
             // For one-time payments, use payment_intent ID; for subscriptions, use subscription ID
             const paymentId = session?.payment_intent || session?.subscription || session?.id;
 
-            // Check if subscription already exists (avoid duplicates)
+            // Find the user's current active subscription (if any)
             const existing = await prisma.subscription.findFirst({
               where: {
                 userId,
-                planId,
                 status: "active",
                 endDate: { gt: now },
               },
+              orderBy: { endDate: "desc" },
             });
 
-            if (!existing) {
-              await prisma.subscription.create({
-                data: {
-                  userId,
-                  planId,
-                  status: "active",
-                  startDate: now,
-                  endDate,
-                  // Store payment intent ID for one-time payments, or subscription ID for recurring
-                  stripeSubscriptionId: paymentId ? String(paymentId) : null,
-                },
-              }).catch((err) => {
-                logger.error("Failed to create subscription from webhook", err as Error, {
-                  userId,
-                  planId,
-                  paymentId,
+            // Determine the base date from which to extend:
+            // - if there's an active subscription, extend from its endDate
+            // - otherwise, start from "now"
+            const baseDate =
+              existing && existing.endDate && existing.endDate > now
+                ? existing.endDate
+                : now;
+
+            const newEndDate = new Date(baseDate);
+            newEndDate.setMonth(newEndDate.getMonth() + plan.duration);
+
+            if (existing) {
+              // Extend the existing subscription and update it to the newly purchased plan
+              await prisma.subscription
+                .update({
+                  where: { id: existing.id },
+                  data: {
+                    planId,
+                    endDate: newEndDate,
+                    stripeSubscriptionId: paymentId ? String(paymentId) : existing.stripeSubscriptionId,
+                  },
+                })
+                .catch((err) => {
+                  logger.error("Failed to extend subscription from webhook", err as Error, {
+                    userId,
+                    planId,
+                    paymentId,
+                  });
                 });
-              });
+            } else {
+              // No active subscription yet – create a new one starting now
+              await prisma.subscription
+                .create({
+                  data: {
+                    userId,
+                    planId,
+                    status: "active",
+                    startDate: now,
+                    endDate: newEndDate,
+                    // Store payment intent ID for one-time payments, or subscription ID for recurring
+                    stripeSubscriptionId: paymentId ? String(paymentId) : null,
+                  },
+                })
+                .catch((err) => {
+                  logger.error("Failed to create subscription from webhook", err as Error, {
+                    userId,
+                    planId,
+                    paymentId,
+                  });
+                });
             }
           }
         }
