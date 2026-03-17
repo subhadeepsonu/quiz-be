@@ -116,42 +116,42 @@ export async function createGuestCheckoutSession(req: Request, res: Response) {
       : email.split("@")[0] || "User";
 
     const existingUser = await prisma.user.findUnique({ where: { email } });
-    if (existingUser) {
-      res.status(StatusCodes.CONFLICT).json({
-        error: "This email is already registered. Please sign in to purchase.",
+
+    let user = existingUser;
+
+    // If the user doesn't exist yet, create an account and send credentials.
+    // If the user already exists, reuse that account for checkout instead of blocking.
+    if (!user) {
+      // Create account with random password
+      const password = randomPassword();
+      const hashed = bcrypt.hashSync(password, 10);
+
+      user = await prisma.user.create({
+        data: {
+          email,
+          name,
+          password: hashed,
+          role: "user",
+        },
       });
-      return;
+
+      const magicToken = generateMagicToken();
+      const tokenHash = hashMagicToken(magicToken);
+      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          magicLoginTokenHash: tokenHash,
+          magicLoginExpiresAt: expiresAt,
+        },
+      });
+
+      const loginUrl = `${getFrontendBaseUrl()}/auth/login?checkout=true&email=${encodeURIComponent(email)}`;
+      const magicLinkUrl = `${getFrontendBaseUrl()}/auth/magic?token=${magicToken}&flow=purchase`;
+
+      await sendPasswordEmail({ to: email, password, loginUrl, magicLinkUrl });
     }
-
-    // Create account with random password
-    const password = randomPassword();
-    const hashed = bcrypt.hashSync(password, 10);
-
-    const user = await prisma.user.create({
-      data: {
-        email,
-        name,
-        password: hashed,
-        role: "user",
-      },
-    });
-
-    const magicToken = generateMagicToken();
-    const tokenHash = hashMagicToken(magicToken);
-    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
-
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        magicLoginTokenHash: tokenHash,
-        magicLoginExpiresAt: expiresAt,
-      },
-    });
-
-    const loginUrl = `${getFrontendBaseUrl()}/auth/login?checkout=true&email=${encodeURIComponent(email)}`;
-    const magicLinkUrl = `${getFrontendBaseUrl()}/auth/magic?token=${magicToken}&flow=purchase`;
-
-    await sendPasswordEmail({ to: email, password, loginUrl, magicLinkUrl });
 
     // Get plan
     const plan = await prisma.plan.findUnique({ where: { id: planId } });
