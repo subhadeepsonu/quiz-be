@@ -14,7 +14,7 @@ function signJwt(user: { id: string; role: Role }) {
 }
 
 function getFrontendBaseUrl(): string {
-  return process.env.FRONTEND_BASE_URL || "https://ascensa-frontned.vercel.app";
+  return process.env.FRONTEND_BASE_URL || "https://ascensaprep.com";
 }
 
 function normalizeEmail(email: string) {

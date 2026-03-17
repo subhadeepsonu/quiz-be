@@ -7,11 +7,11 @@ function requiredEnv(name: string): string {
 }
 
 function getFrontendBaseUrl(): string {
-  return process.env.FRONTEND_BASE_URL || "https://ascensa-frontned.vercel.app";
+  return process.env.FRONTEND_BASE_URL || "https://ascensaprep.com";
 }
 
 function getEmailLogoUrl(): string {
-  return process.env.EMAIL_LOGO_URL || "https://ascensa-frontned.vercel.app/logo.jpeg";
+  return process.env.EMAIL_LOGO_URL || "https://ascensaprep.com/logo.jpeg";
 }
 
 export function getMailer() {
