@@ -9,6 +9,7 @@ import { changePasswordValidator } from "../validator/auth.validator";
 import { AuthenticatedRequest } from "../middleware/middleware";
 import { computeEntitlements } from "../services/entitlements";
 import { logger } from "../utils/logger";
+import { updateMeValidator } from "../validator/user.validator";
 
 export async function getAllUser(req: Request, res: Response) {
   try {
@@ -124,6 +125,44 @@ export async function changePassword(req: AuthenticatedRequest, res: Response) {
     res.status(StatusCodes.OK).json({ message: "Password updated successfully." });
   } catch (error) {
     logger.error("Error in changePassword", error as Error, logger.getRequestContext(req));
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: "Internal Server Error" });
+  }
+}
+
+export async function updateMe(req: AuthenticatedRequest, res: Response) {
+  try {
+    const userId = req.userId;
+    if (!userId) {
+      res.status(StatusCodes.UNAUTHORIZED).json({ error: "Unauthorized" });
+      return;
+    }
+
+    const check = updateMeValidator.safeParse(req.body);
+    if (!check.success) {
+      res.status(StatusCodes.BAD_REQUEST).json({
+        error: "Invalid request body",
+        details: check.error.errors,
+      });
+      return;
+    }
+
+    const updated = await prisma.user.update({
+      where: { id: userId },
+      data: { name: check.data.name },
+      select: {
+        role: true,
+        name: true,
+        email: true,
+        createdAt: true,
+      },
+    });
+
+    res.status(StatusCodes.OK).json({
+      message: "Profile updated successfully",
+      data: updated,
+    });
+  } catch (error) {
+    logger.error("Error in updateMe", error as Error, logger.getRequestContext(req));
     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: "Internal Server Error" });
   }
 }
