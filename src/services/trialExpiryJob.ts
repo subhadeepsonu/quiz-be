@@ -2,7 +2,7 @@ import { prisma } from "../db";
 import { sendTrialEndedEmail } from "./email";
 
 function getFrontendBaseUrl(): string {
-  return process.env.FRONTEND_BASE_URL || "http://localhost:3001";
+  return process.env.FRONTEND_BASE_URL || "https://www.ascensaprep.com";
 }
 
 export async function runTrialExpirySweep() {
