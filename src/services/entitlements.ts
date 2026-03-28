@@ -4,6 +4,8 @@ export type AccessLevel = "DIAGNOSTIC_ONLY" | "TRIAL_ACTIVE" | "SUBSCRIBED_ACTIV
 
 export async function computeEntitlements(userId: string) {
   const now = new Date();
+  const DAILY_QUESTION_LIMIT =
+    Number(process.env.DAILY_QUESTION_LIMIT || 250) || 250;
 
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -35,11 +37,32 @@ export async function computeEntitlements(userId: string) {
       ? "TRIAL_ACTIVE"
       : "DIAGNOSTIC_ONLY";
 
+  // Calendar-day question attempts (server timezone).
+  const startOfDay = new Date(now);
+  startOfDay.setHours(0, 0, 0, 0);
+  const startOfTomorrow = new Date(startOfDay);
+  startOfTomorrow.setDate(startOfDay.getDate() + 1);
+
+  const dailyQuestionAttempted = await prisma.submittedAnswer.count({
+    where: {
+      submission: { userId },
+      answeredAt: { gte: startOfDay, lt: startOfTomorrow },
+    },
+  });
+
+  const dailyQuestionLimitReached =
+    dailyQuestionAttempted >= DAILY_QUESTION_LIMIT;
+
   return {
     accessLevel,
     trialEndsAt: user.trialEndsAt,
     trialUsed: !!user.trialUsedAt,
     hasActiveSubscription,
+    dailyQuestionLimit: DAILY_QUESTION_LIMIT,
+    dailyQuestionAttempted,
+    dailyQuestionLimitReached,
+    // ISO string so the frontend can compute "resets in X"
+    dailyQuestionResetAt: startOfTomorrow.toISOString(),
     subscription: activeSubscription
       ? {
           id: activeSubscription.id,

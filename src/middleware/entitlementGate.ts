@@ -28,6 +28,18 @@ export function requireQuizAccess() {
         return;
       }
 
+      // Daily question attempt limit (applies to all users and all tests).
+      if (ent.dailyQuestionLimitReached) {
+        res.status(StatusCodes.FORBIDDEN).json({
+          code: "DAILY_QUESTION_LIMIT_REACHED",
+          error: "Daily question limit reached",
+          limit: ent.dailyQuestionLimit,
+          attemptedCount: ent.dailyQuestionAttempted,
+          resetAt: ent.dailyQuestionResetAt,
+        });
+        return;
+      }
+
       if (ent.accessLevel !== "DIAGNOSTIC_ONLY") {
         next();
         return;
