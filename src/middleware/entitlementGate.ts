@@ -28,6 +28,29 @@ export function requireQuizAccess() {
         return;
       }
 
+      const limit = ent.dailyQuestionLimit;
+      const used = ent.dailyQuestionAttempted;
+      const remaining = Math.max(0, limit - used);
+      let resetInText = "soon";
+      try {
+        if (ent.dailyQuestionResetAt) {
+          const resetMs =
+            new Date(ent.dailyQuestionResetAt).getTime() - Date.now();
+          if (resetMs > 0) {
+            const totalMinutes = Math.ceil(resetMs / 60000);
+            const hours = Math.floor(totalMinutes / 60);
+            const minutes = totalMinutes % 60;
+            resetInText =
+              hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+          }
+        }
+      } catch {
+        // keep resetInText = "soon"
+      }
+      console.log(
+        `[DAILY_QUESTION_LIMIT] userId=${userId} quizId=${quizId} used=${used}/${limit} remaining=${remaining} resetIn=${resetInText} resetAt=${ent.dailyQuestionResetAt}`
+      );
+
       // Daily question attempt limit (applies to all users and all tests).
       if (ent.dailyQuestionLimitReached) {
         res.status(StatusCodes.FORBIDDEN).json({
