@@ -33,7 +33,8 @@
     "sync:mocks": "ts-node src/scripts/syncMocks.ts",
     "hash-password": "ts-node src/scripts/hashPassword.ts",
     "delete:all-users": "ts-node src/scripts/deleteAllUsers.ts",
-    "create-user": "ts-node src/scripts/createUser.ts"
+    "create-user": "ts-node src/scripts/createUser.ts",
+    "send-test-email": "ts-node src/scripts/sendTestEmail.ts"
   },
   "keywords": [],
   "author": "",

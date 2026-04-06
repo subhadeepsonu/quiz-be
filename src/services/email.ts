@@ -14,6 +14,29 @@ function getEmailLogoUrl(): string {
   return process.env.EMAIL_LOGO_URL || "https://ascensaprep.com/logo.jpeg";
 }
 
+const DEFAULT_EMAIL_FROM_NAME = "AscensaPrep";
+
+function extractEmailAddress(raw: string): string {
+  const trimmed = raw.trim();
+  const angle = trimmed.match(/<([^>]+)>/);
+  if (angle) return angle[1].trim();
+  return trimmed;
+}
+
+/** Bare email from EMAIL_FROM / SMTP_USER (for routing, Reply-To targets, etc.). */
+export function getEmailAddressFromEnv(): string {
+  const raw = process.env.EMAIL_FROM || process.env.SMTP_USER;
+  if (!raw) throw new Error("Missing EMAIL_FROM or SMTP_USER");
+  return extractEmailAddress(raw);
+}
+
+/** From header with display name for all transactional mail. Override via EMAIL_FROM_NAME. */
+export function getEmailFromHeader(): string {
+  const name = process.env.EMAIL_FROM_NAME?.trim() || DEFAULT_EMAIL_FROM_NAME;
+  const email = getEmailAddressFromEnv();
+  return `${name} <${email}>`;
+}
+
 export function getMailer() {
   const host = requiredEnv("SMTP_HOST");
   const port = Number(requiredEnv("SMTP_PORT"));
@@ -29,8 +52,7 @@ export function getMailer() {
 }
 
 export async function sendMagicLoginEmail(opts: { to: string; magicLinkUrl: string }) {
-  const from = process.env.EMAIL_FROM || process.env.SMTP_USER;
-  if (!from) throw new Error("Missing EMAIL_FROM or SMTP_USER");
+  const from = getEmailFromHeader();
 
   const transporter = getMailer();
   await transporter.sendMail({
@@ -166,8 +188,7 @@ const PASSWORD_RESET_HTML = (opts: { resetUrl: string; logoUrl: string }) => `<!
 </html>`;
 
 export async function sendPasswordResetEmail(opts: { to: string; resetUrl: string }) {
-  const from = process.env.EMAIL_FROM || process.env.SMTP_USER;
-  if (!from) throw new Error("Missing EMAIL_FROM or SMTP_USER");
+  const from = getEmailFromHeader();
   const transporter = getMailer();
   await transporter.sendMail({
     from,
@@ -179,8 +200,7 @@ export async function sendPasswordResetEmail(opts: { to: string; resetUrl: strin
 }
 
 export async function sendPasswordEmail(opts: { to: string; password: string; loginUrl: string; magicLinkUrl?: string }) {
-  const from = process.env.EMAIL_FROM || process.env.SMTP_USER;
-  if (!from) throw new Error("Missing EMAIL_FROM or SMTP_USER");
+  const from = getEmailFromHeader();
 
   const transporter = getMailer();
   const loginPageUrl = opts.magicLinkUrl || opts.loginUrl;
@@ -262,8 +282,7 @@ const TRIAL_ENDED_HTML = (opts: { subscriptionPageUrl: string; logoUrl: string }
 </html>`;
 
 export async function sendTrialEndedEmail(opts: { to: string; pricingUrl: string }) {
-  const from = process.env.EMAIL_FROM || process.env.SMTP_USER;
-  if (!from) throw new Error("Missing EMAIL_FROM or SMTP_USER");
+  const from = getEmailFromHeader();
 
   const transporter = getMailer();
   await transporter.sendMail({

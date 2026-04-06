@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
 import { logger } from "../utils/logger";
-import { getMailer } from "../services/email";
+import { getEmailAddressFromEnv, getEmailFromHeader, getMailer } from "../services/email";
 
 export async function submitContact(req: Request, res: Response) {
   try {
@@ -21,8 +21,10 @@ export async function submitContact(req: Request, res: Response) {
       return;
     }
 
-    const from = process.env.EMAIL_FROM || process.env.SMTP_USER;
-    if (!from) {
+    let from: string;
+    try {
+      from = getEmailFromHeader();
+    } catch {
       res
         .status(StatusCodes.INTERNAL_SERVER_ERROR)
         .json({ error: "Email is not configured" });
@@ -32,7 +34,7 @@ export async function submitContact(req: Request, res: Response) {
     const supportTo =
       process.env.CONTACT_EMAIL ||
       process.env.SUPPORT_EMAIL ||
-      from;
+      getEmailAddressFromEnv();
 
     const transporter = getMailer();
 
