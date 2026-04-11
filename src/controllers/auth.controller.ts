@@ -53,6 +53,12 @@ export async function login(req: Request, res: Response) {
       });
       return;
     }
+    if (!checkUser.isActive) {
+      res.status(StatusCodes.FORBIDDEN).json({
+        error: "Account is inactive. Contact support if you believe this is a mistake.",
+      });
+      return;
+    }
     const validPassword = bcrypt.compareSync(
       check.data.password,
       checkUser.password
@@ -101,6 +107,12 @@ export async function adminLogin(req: Request, res: Response) {
     if (!checkUser) {
       res.status(StatusCodes.UNAUTHORIZED).json({
         message: "User not found",
+      });
+      return;
+    }
+    if (!checkUser.isActive) {
+      res.status(StatusCodes.FORBIDDEN).json({
+        message: "Account is inactive",
       });
       return;
     }
@@ -347,11 +359,16 @@ export async function verifyMagic(req: Request, res: Response) {
       select: {
         id: true,
         role: true,
+        isActive: true,
       },
     });
 
     if (!user) {
       res.status(StatusCodes.UNAUTHORIZED).json({ error: "Invalid or expired token" });
+      return;
+    }
+    if (!user.isActive) {
+      res.status(StatusCodes.FORBIDDEN).json({ error: "Account is inactive" });
       return;
     }
 

@@ -10,6 +10,9 @@ import {
   getEntitlements,
   changePassword,
   updateMe,
+  getAdminAnalytics,
+  exportAdminUsers,
+  patchUserActive,
 } from "../controllers/user.controller";
 import { middleware } from "../middleware/middleware";
 
@@ -24,6 +27,9 @@ userRouter.get(
   middleware(["user", "admin", "editor"]),
   getEntitlements
 );
+userRouter.get("/admin/analytics", middleware(["admin"]), getAdminAnalytics);
+userRouter.get("/admin/export", middleware(["admin"]), exportAdminUsers);
+userRouter.patch("/:id/active", middleware(["admin"]), patchUserActive);
 userRouter.get("/:id", middleware(["admin"]), getUser);
 userRouter.post("/", middleware(["admin"]), createUser);
 userRouter.put("/:id/promote", middleware(["admin"]), ChangeRole);

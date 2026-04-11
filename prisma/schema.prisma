@@ -107,6 +107,7 @@ model User {
   email         String         @unique
   password      String
   role          Role           @default(user)
+  isActive      Boolean        @default(true)
   submissions   Submission[]
   subscriptions Subscription[]
   createdAt     DateTime       @default(now())

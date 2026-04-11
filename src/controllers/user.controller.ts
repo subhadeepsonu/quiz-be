@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
 import { prisma } from "../db";
-import { Role } from "@prisma/client";
+import { Prisma, Role } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { registerValidator } from "../validator/auth.validator";
@@ -11,33 +11,349 @@ import { computeEntitlements } from "../services/entitlements";
 import { logger } from "../utils/logger";
 import { updateMeValidator } from "../validator/user.validator";
 
+type AdminAccessLevel = "DIAGNOSTIC_ONLY" | "TRIAL_ACTIVE" | "SUBSCRIBED_ACTIVE";
+
+function getServerDayBounds(now = new Date()) {
+  const startOfDay = new Date(now);
+  startOfDay.setHours(0, 0, 0, 0);
+  const startOfTomorrow = new Date(startOfDay);
+  startOfTomorrow.setDate(startOfDay.getDate() + 1);
+  return { startOfDay, startOfTomorrow };
+}
+
+function getDailyQuestionLimit() {
+  return Number(process.env.DAILY_QUESTION_LIMIT || 250) || 250;
+}
+
+function computeAdminAccessLevel(params: {
+  trialEndsAt: Date | null;
+  hasActiveSubscription: boolean;
+}): AdminAccessLevel {
+  if (params.hasActiveSubscription) return "SUBSCRIBED_ACTIVE";
+  if (params.trialEndsAt && params.trialEndsAt.getTime() > Date.now()) {
+    return "TRIAL_ACTIVE";
+  }
+  return "DIAGNOSTIC_ONLY";
+}
+
+async function batchDailyQuestionAttempts(
+  userIds: string[],
+  startOfDay: Date,
+  startOfTomorrow: Date
+): Promise<Map<string, number>> {
+  if (userIds.length === 0) return new Map();
+  const rows = await prisma.$queryRaw<{ userId: string; cnt: bigint }[]>`
+    SELECT s."userId" AS "userId", COUNT(sa.id) AS cnt
+    FROM "SubmittedAnswer" sa
+    INNER JOIN "Submission" s ON s.id = sa."submissionId"
+    WHERE sa."answeredAt" >= ${startOfDay}
+      AND sa."answeredAt" < ${startOfTomorrow}
+      AND s."userId" IN (${Prisma.join(userIds)})
+    GROUP BY s."userId"
+  `;
+  const map = new Map<string, number>();
+  for (const row of rows) {
+    map.set(row.userId, Number(row.cnt));
+  }
+  return map;
+}
+
+async function batchActiveSubscriptions(userIds: string[], now: Date) {
+  const map = new Map<string, { endDate: Date; planName: string | null }>();
+  if (userIds.length === 0) return map;
+  const subs = await prisma.subscription.findMany({
+    where: {
+      userId: { in: userIds },
+      status: "active",
+      endDate: { gt: now },
+    },
+    include: { plan: true },
+    orderBy: { endDate: "desc" },
+  });
+  for (const s of subs) {
+    if (!map.has(s.userId)) {
+      map.set(s.userId, {
+        endDate: s.endDate,
+        planName: s.plan?.name ?? null,
+      });
+    }
+  }
+  return map;
+}
+
+async function mapUsersToAdminRows(
+  users: Array<{
+    id: string;
+    name: string;
+    email: string;
+    role: Role;
+    isActive: boolean;
+    createdAt: Date;
+    trialEndsAt: Date | null;
+    trialUsedAt: Date | null;
+  }>
+) {
+  const now = new Date();
+  const { startOfDay, startOfTomorrow } = getServerDayBounds(now);
+  const limit = getDailyQuestionLimit();
+  const ids = users.map((u) => u.id);
+  const [attemptsByUser, subByUser] = await Promise.all([
+    batchDailyQuestionAttempts(ids, startOfDay, startOfTomorrow),
+    batchActiveSubscriptions(ids, now),
+  ]);
+
+  return users.map((u) => {
+    const attempted = attemptsByUser.get(u.id) ?? 0;
+    const hasActiveSubscription = subByUser.has(u.id);
+    const accessLevel = computeAdminAccessLevel({
+      trialEndsAt: u.trialEndsAt,
+      hasActiveSubscription,
+    });
+    const remaining = Math.max(0, limit - attempted);
+    return {
+      id: u.id,
+      name: u.name,
+      email: u.email,
+      role: u.role,
+      isActive: u.isActive,
+      createdAt: u.createdAt,
+      accessLevel,
+      trialEndsAt: u.trialEndsAt,
+      trialUsed: !!u.trialUsedAt,
+      hasActiveSubscription,
+      subscription: subByUser.get(u.id) ?? null,
+      dailyQuestionLimit: limit,
+      dailyQuestionAttempted: attempted,
+      dailyQuestionRemaining: remaining,
+      dailyQuestionLimitReached: attempted >= limit,
+      dailyQuestionResetAt: startOfTomorrow.toISOString(),
+    };
+  });
+}
+
 export async function getAllUser(req: Request, res: Response) {
   try {
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 10;
+    const page = parseInt(req.query.page as string, 10) || 1;
+    const limit = parseInt(req.query.limit as string, 10) || 10;
     const skip = (page - 1) * limit;
-    const users = await prisma.user.findMany({
-      skip: skip,
-      take: limit,
-    });
-    const totalUsers = await prisma.user.count({});
+    const searchRaw = (req.query.search as string | undefined)?.trim();
+
+    const where: Prisma.UserWhereInput =
+      searchRaw && searchRaw.length > 0
+        ? {
+            OR: [
+              { email: { contains: searchRaw, mode: "insensitive" } },
+              { name: { contains: searchRaw, mode: "insensitive" } },
+            ],
+          }
+        : {};
+
+    const [users, totalUsers] = await Promise.all([
+      prisma.user.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          isActive: true,
+          createdAt: true,
+          trialEndsAt: true,
+          trialUsedAt: true,
+        },
+      }),
+      prisma.user.count({ where }),
+    ]);
+
+    const data = await mapUsersToAdminRows(users);
+
     res.status(StatusCodes.OK).json({
       message: "Users fetched successfully",
-      data: users,
+      data,
       pagination: {
         total: totalUsers,
-        page: page,
-        limit: limit,
-        totalPages: Math.ceil(totalUsers / limit),
+        page,
+        limit,
+        totalPages: Math.ceil(totalUsers / limit) || 1,
       },
     });
-    return;
   } catch (error) {
     logger.error("Error in getAllUser", error as Error, logger.getRequestContext(req));
     res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
       .json({ error: "Internal Server Error" });
-    return;
+  }
+}
+
+export async function getAdminAnalytics(req: Request, res: Response) {
+  try {
+    const now = new Date();
+    const { startOfDay, startOfTomorrow } = getServerDayBounds(now);
+    const dailyLimit = getDailyQuestionLimit();
+    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+    const [
+      totalUsers,
+      activeAccounts,
+      inactiveAccounts,
+      activeSubscriptions,
+      totalSubmissions,
+      submissionsLast7Days,
+      newUsersLast7Days,
+      totalQuizzes,
+      totalQuestions,
+      usersAtDailyLimitRows,
+    ] = await Promise.all([
+      prisma.user.count(),
+      prisma.user.count({ where: { isActive: true } }),
+      prisma.user.count({ where: { isActive: false } }),
+      prisma.subscription.count({
+        where: { status: "active", endDate: { gt: now } },
+      }),
+      prisma.submission.count(),
+      prisma.submission.count({
+        where: { startedAt: { gte: weekAgo } },
+      }),
+      prisma.user.count({ where: { createdAt: { gte: weekAgo } } }),
+      prisma.quiz.count({ where: { isDeleted: false } }),
+      prisma.question.count({ where: { isDeleted: false } }),
+      prisma.$queryRaw<{ cnt: bigint }[]>`
+        SELECT COUNT(*)::bigint AS cnt
+        FROM (
+          SELECT s."userId"
+          FROM "SubmittedAnswer" sa
+          INNER JOIN "Submission" s ON s.id = sa."submissionId"
+          WHERE sa."answeredAt" >= ${startOfDay}
+            AND sa."answeredAt" < ${startOfTomorrow}
+          GROUP BY s."userId"
+          HAVING COUNT(sa.id) >= ${dailyLimit}
+        ) u
+      `,
+    ]);
+
+    const rawLimitCount = usersAtDailyLimitRows[0]?.cnt;
+    const usersAtDailyQuestionLimit =
+      rawLimitCount === undefined || rawLimitCount === null
+        ? 0
+        : typeof rawLimitCount === "bigint"
+          ? Number(rawLimitCount)
+          : Number(rawLimitCount);
+
+    res.status(StatusCodes.OK).json({
+      message: "Analytics fetched",
+      data: {
+        totalUsers,
+        activeAccounts,
+        inactiveAccounts,
+        activeSubscriptions,
+        totalSubmissions,
+        submissionsLast7Days,
+        newUsersLast7Days,
+        totalQuizzes,
+        totalQuestions,
+        dailyQuestionLimit: dailyLimit,
+        usersAtDailyQuestionLimitToday: usersAtDailyQuestionLimit,
+      },
+    });
+  } catch (error) {
+    logger.error(
+      "Error in getAdminAnalytics",
+      error as Error,
+      logger.getRequestContext(req)
+    );
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: "Internal Server Error" });
+  }
+}
+
+export async function exportAdminUsers(req: Request, res: Response) {
+  try {
+    const searchRaw = (req.query.search as string | undefined)?.trim();
+    const where: Prisma.UserWhereInput =
+      searchRaw && searchRaw.length > 0
+        ? {
+            OR: [
+              { email: { contains: searchRaw, mode: "insensitive" } },
+              { name: { contains: searchRaw, mode: "insensitive" } },
+            ],
+          }
+        : {};
+
+    const users = await prisma.user.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      take: 10_000,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        isActive: true,
+        createdAt: true,
+        trialEndsAt: true,
+        trialUsedAt: true,
+      },
+    });
+
+    const data = await mapUsersToAdminRows(users);
+
+    res.status(StatusCodes.OK).json({
+      message: "Export ready",
+      data,
+    });
+  } catch (error) {
+    logger.error(
+      "Error in exportAdminUsers",
+      error as Error,
+      logger.getRequestContext(req)
+    );
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: "Internal Server Error" });
+  }
+}
+
+export async function patchUserActive(req: AuthenticatedRequest, res: Response) {
+  try {
+    const id = req.params.id;
+    const isActive = req.body?.isActive;
+    if (typeof isActive !== "boolean") {
+      res.status(StatusCodes.BAD_REQUEST).json({ error: "Body must include isActive: boolean" });
+      return;
+    }
+    if (req.userId === id && isActive === false) {
+      res.status(StatusCodes.BAD_REQUEST).json({
+        error: "You cannot deactivate your own account while signed in.",
+      });
+      return;
+    }
+    const existing = await prisma.user.findUnique({ where: { id } });
+    if (!existing) {
+      res.status(StatusCodes.NOT_FOUND).json({ error: "User not found" });
+      return;
+    }
+    const updated = await prisma.user.update({
+      where: { id },
+      data: { isActive },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        isActive: true,
+        createdAt: true,
+        trialEndsAt: true,
+        trialUsedAt: true,
+      },
+    });
+    const [row] = await mapUsersToAdminRows([updated]);
+    res.status(StatusCodes.OK).json({
+      message: "User updated",
+      data: row,
+    });
+  } catch (error) {
+    logger.error("Error in patchUserActive", error as Error, logger.getRequestContext(req));
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: "Internal Server Error" });
   }
 }
 
