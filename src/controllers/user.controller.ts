@@ -122,6 +122,16 @@ async function mapUsersToAdminRows(
       trialUsed: !!u.trialUsedAt,
       hasActiveSubscription,
       subscription: subByUser.get(u.id) ?? null,
+      membershipDaysLeft: hasActiveSubscription
+        ? Math.max(
+            0,
+            Math.ceil(
+              ((subByUser.get(u.id)?.endDate?.getTime() ?? now.getTime()) -
+                now.getTime()) /
+                (1000 * 60 * 60 * 24)
+            )
+          )
+        : null,
       dailyQuestionLimit: limit,
       dailyQuestionAttempted: attempted,
       dailyQuestionRemaining: remaining,
@@ -306,6 +316,124 @@ export async function exportAdminUsers(req: Request, res: Response) {
   } catch (error) {
     logger.error(
       "Error in exportAdminUsers",
+      error as Error,
+      logger.getRequestContext(req)
+    );
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: "Internal Server Error" });
+  }
+}
+
+export async function extendUserMembership(req: AuthenticatedRequest, res: Response) {
+  try {
+    const id = req.params.id;
+    const daysRaw = req.body?.days;
+    const planIdRaw = req.body?.planId;
+    const days = Number(daysRaw);
+    const planId =
+      typeof planIdRaw === "string" && planIdRaw.trim().length > 0
+        ? planIdRaw.trim()
+        : null;
+
+    if (!Number.isInteger(days) || days <= 0 || days > 3650) {
+      res.status(StatusCodes.BAD_REQUEST).json({
+        error: "days must be a positive integer between 1 and 3650",
+      });
+      return;
+    }
+
+    const existingUser = await prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        isActive: true,
+        createdAt: true,
+        trialEndsAt: true,
+        trialUsedAt: true,
+      },
+    });
+    if (!existingUser) {
+      res.status(StatusCodes.NOT_FOUND).json({ error: "User not found" });
+      return;
+    }
+
+    const now = new Date();
+    const activeSubscription = await prisma.subscription.findFirst({
+      where: {
+        userId: id,
+        status: "active",
+        endDate: { gt: now },
+      },
+      orderBy: { endDate: "desc" },
+    });
+
+    if (activeSubscription) {
+      const newEndDate = new Date(activeSubscription.endDate);
+      newEndDate.setDate(newEndDate.getDate() + days);
+      await prisma.subscription.update({
+        where: { id: activeSubscription.id },
+        data: {
+          endDate: newEndDate,
+          currentPeriodEnd: newEndDate,
+          status: "active",
+        },
+      });
+    } else {
+      const latestSubscription = await prisma.subscription.findFirst({
+        where: { userId: id },
+        orderBy: { endDate: "desc" },
+        select: { planId: true },
+      });
+
+      let targetPlanId = planId ?? latestSubscription?.planId ?? null;
+      if (!targetPlanId) {
+        const fallbackPlan = await prisma.plan.findFirst({
+          where: { isActive: true },
+          orderBy: { createdAt: "asc" },
+          select: { id: true },
+        });
+        targetPlanId = fallbackPlan?.id ?? null;
+      }
+      if (!targetPlanId) {
+        res.status(StatusCodes.BAD_REQUEST).json({
+          error: "No active plan available to create membership",
+        });
+        return;
+      }
+      const selectedPlan = await prisma.plan.findFirst({
+        where: { id: targetPlanId, isActive: true },
+        select: { id: true },
+      });
+      if (!selectedPlan) {
+        res.status(StatusCodes.BAD_REQUEST).json({
+          error: "Selected plan is not active or does not exist",
+        });
+        return;
+      }
+      const endDate = new Date(now);
+      endDate.setDate(endDate.getDate() + days);
+      await prisma.subscription.create({
+        data: {
+          userId: id,
+          planId: selectedPlan.id,
+          status: "active",
+          startDate: now,
+          endDate,
+          currentPeriodEnd: endDate,
+        },
+      });
+    }
+
+    const [row] = await mapUsersToAdminRows([existingUser]);
+    res.status(StatusCodes.OK).json({
+      message: "Membership extended successfully",
+      data: row,
+    });
+  } catch (error) {
+    logger.error(
+      "Error in extendUserMembership",
       error as Error,
       logger.getRequestContext(req)
     );
