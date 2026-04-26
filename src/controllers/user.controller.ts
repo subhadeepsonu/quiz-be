@@ -328,6 +328,7 @@ export async function extendUserMembership(req: AuthenticatedRequest, res: Respo
     const id = req.params.id;
     const daysRaw = req.body?.days;
     const planIdRaw = req.body?.planId;
+    const extendAsTrial = req.body?.extendAsTrial === true;
     const days = Number(daysRaw);
     const planId =
       typeof planIdRaw === "string" && planIdRaw.trim().length > 0
@@ -369,7 +370,21 @@ export async function extendUserMembership(req: AuthenticatedRequest, res: Respo
       orderBy: { endDate: "desc" },
     });
 
-    if (activeSubscription) {
+    if (extendAsTrial && !activeSubscription) {
+      const trialBase =
+        existingUser.trialEndsAt && existingUser.trialEndsAt.getTime() > now.getTime()
+          ? new Date(existingUser.trialEndsAt)
+          : new Date(now);
+      trialBase.setDate(trialBase.getDate() + days);
+
+      await prisma.user.update({
+        where: { id },
+        data: {
+          trialEndsAt: trialBase,
+          trialUsedAt: existingUser.trialUsedAt ?? now,
+        },
+      });
+    } else if (activeSubscription) {
       const newEndDate = new Date(activeSubscription.endDate);
       newEndDate.setDate(newEndDate.getDate() + days);
       await prisma.subscription.update({
@@ -397,8 +412,19 @@ export async function extendUserMembership(req: AuthenticatedRequest, res: Respo
         targetPlanId = fallbackPlan?.id ?? null;
       }
       if (!targetPlanId) {
-        res.status(StatusCodes.BAD_REQUEST).json({
-          error: "No active plan available to create membership",
+        const trialEnd = new Date(now);
+        trialEnd.setDate(trialEnd.getDate() + days);
+        await prisma.user.update({
+          where: { id },
+          data: {
+            trialEndsAt: trialEnd,
+            trialUsedAt: existingUser.trialUsedAt ?? now,
+          },
+        });
+        const [row] = await mapUsersToAdminRows([existingUser]);
+        res.status(StatusCodes.OK).json({
+          message: "Trial extended successfully",
+          data: row,
         });
         return;
       }
