@@ -328,16 +328,37 @@ export async function extendUserMembership(req: AuthenticatedRequest, res: Respo
     const id = req.params.id;
     const daysRaw = req.body?.days;
     const planIdRaw = req.body?.planId;
-    const extendAsTrial = req.body?.extendAsTrial === true;
+    const extensionTypeRaw = req.body?.extensionType;
+    const extensionType =
+      extensionTypeRaw === "MONTH_1" ||
+      extensionTypeRaw === "MONTH_3" ||
+      extensionTypeRaw === "MONTH_6" ||
+      extensionTypeRaw === "FREE_TRIAL"
+        ? extensionTypeRaw
+        : null;
     const days = Number(daysRaw);
     const planId =
       typeof planIdRaw === "string" && planIdRaw.trim().length > 0
         ? planIdRaw.trim()
         : null;
 
-    if (!Number.isInteger(days) || days <= 0 || days > 3650) {
+    const extensionDaysFromType =
+      extensionType === "MONTH_1"
+        ? 30
+        : extensionType === "MONTH_3"
+          ? 90
+          : extensionType === "MONTH_6"
+            ? 180
+            : extensionType === "FREE_TRIAL"
+              ? 30
+              : null;
+    const effectiveDays = extensionDaysFromType ?? days;
+    const forceTrial = extensionType === "FREE_TRIAL" || req.body?.extendAsTrial === true;
+
+    if (!Number.isInteger(effectiveDays) || effectiveDays <= 0 || effectiveDays > 3650) {
       res.status(StatusCodes.BAD_REQUEST).json({
-        error: "days must be a positive integer between 1 and 3650",
+        error:
+          "Provide extensionType (MONTH_1, MONTH_3, MONTH_6, FREE_TRIAL) or a valid days value (1-3650)",
       });
       return;
     }
@@ -370,12 +391,12 @@ export async function extendUserMembership(req: AuthenticatedRequest, res: Respo
       orderBy: { endDate: "desc" },
     });
 
-    if (extendAsTrial && !activeSubscription) {
+    if (forceTrial) {
       const trialBase =
         existingUser.trialEndsAt && existingUser.trialEndsAt.getTime() > now.getTime()
           ? new Date(existingUser.trialEndsAt)
           : new Date(now);
-      trialBase.setDate(trialBase.getDate() + days);
+      trialBase.setDate(trialBase.getDate() + effectiveDays);
 
       await prisma.user.update({
         where: { id },
@@ -386,7 +407,7 @@ export async function extendUserMembership(req: AuthenticatedRequest, res: Respo
       });
     } else if (activeSubscription) {
       const newEndDate = new Date(activeSubscription.endDate);
-      newEndDate.setDate(newEndDate.getDate() + days);
+      newEndDate.setDate(newEndDate.getDate() + effectiveDays);
       await prisma.subscription.update({
         where: { id: activeSubscription.id },
         data: {
@@ -413,7 +434,7 @@ export async function extendUserMembership(req: AuthenticatedRequest, res: Respo
       }
       if (!targetPlanId) {
         const trialEnd = new Date(now);
-        trialEnd.setDate(trialEnd.getDate() + days);
+        trialEnd.setDate(trialEnd.getDate() + effectiveDays);
         await prisma.user.update({
           where: { id },
           data: {
@@ -439,7 +460,7 @@ export async function extendUserMembership(req: AuthenticatedRequest, res: Respo
         return;
       }
       const endDate = new Date(now);
-      endDate.setDate(endDate.getDate() + days);
+      endDate.setDate(endDate.getDate() + effectiveDays);
       await prisma.subscription.create({
         data: {
           userId: id,
