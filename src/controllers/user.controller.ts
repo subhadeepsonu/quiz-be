@@ -355,10 +355,15 @@ export async function extendUserMembership(req: AuthenticatedRequest, res: Respo
     const effectiveDays = extensionDaysFromType ?? days;
     const forceTrial = extensionType === "FREE_TRIAL" || req.body?.extendAsTrial === true;
 
-    if (!Number.isInteger(effectiveDays) || effectiveDays <= 0 || effectiveDays > 3650) {
+    if (
+      !Number.isInteger(effectiveDays) ||
+      effectiveDays === 0 ||
+      effectiveDays > 3650 ||
+      effectiveDays < -3650
+    ) {
       res.status(StatusCodes.BAD_REQUEST).json({
         error:
-          "Provide extensionType (MONTH_1, MONTH_3, MONTH_6, FREE_TRIAL) or a valid days value (1-3650)",
+          "Provide extensionType (MONTH_1, MONTH_3, MONTH_6, FREE_TRIAL) or a valid days value (-3650 to 3650, excluding 0)",
       });
       return;
     }
