@@ -1,5 +1,11 @@
 import { Request, Response } from "express";
-import { loginValidator, registerValidator, forgotPasswordValidator, verifyForgotPasswordValidator } from "../validator/auth.validator";
+import {
+  loginValidator,
+  registerValidator,
+  forgotPasswordValidator,
+  verifyForgotPasswordValidator,
+  startValidator,
+} from "../validator/auth.validator";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { prisma } from "../db";
@@ -53,12 +59,6 @@ export async function login(req: Request, res: Response) {
       });
       return;
     }
-    if (!checkUser.isActive) {
-      res.status(StatusCodes.FORBIDDEN).json({
-        error: "Account is inactive. Contact support if you believe this is a mistake.",
-      });
-      return;
-    }
     const validPassword = bcrypt.compareSync(
       check.data.password,
       checkUser.password
@@ -107,12 +107,6 @@ export async function adminLogin(req: Request, res: Response) {
     if (!checkUser) {
       res.status(StatusCodes.UNAUTHORIZED).json({
         message: "User not found",
-      });
-      return;
-    }
-    if (!checkUser.isActive) {
-      res.status(StatusCodes.FORBIDDEN).json({
-        message: "Account is inactive",
       });
       return;
     }
@@ -274,18 +268,19 @@ export async function verifyForgotPassword(req: Request, res: Response) {
 }
 
 export async function start(req: Request, res: Response) {
+  let createdUserId: string | null = null;
   try {
-    const emailRaw = req.body?.email;
-    if (!emailRaw || typeof emailRaw !== "string") {
-      res.status(StatusCodes.BAD_REQUEST).json({ error: "Email is required" });
+    const check = startValidator.safeParse(req.body);
+    if (!check.success) {
+      res.status(StatusCodes.BAD_REQUEST).json({
+        error: "Valid email is required",
+        details: check.error.errors,
+      });
       return;
     }
 
-    const email = normalizeEmail(emailRaw);
-    const nameRaw = req.body?.name;
-    const name = nameRaw && typeof nameRaw === "string" && nameRaw.trim()
-      ? nameRaw.trim()
-      : email.split("@")[0] || "User";
+    const email = normalizeEmail(check.data.email);
+    const name = check.data.name?.trim() || email.split("@")[0] || "User";
 
     const user = await prisma.user.findUnique({ where: { email } });
 
@@ -296,45 +291,55 @@ export async function start(req: Request, res: Response) {
       return;
     }
 
-    // Create new user with random password
     const password = randomPassword();
     const hashed = bcrypt.hashSync(password, 10);
+    const magicToken = generateMagicToken();
+    const tokenHash = hashMagicToken(magicToken);
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
     const newUser = await prisma.user.create({
       data: {
         email,
         name,
         password: hashed,
         role: "user",
-      },
-    });
-
-    // Generate magic token for auto-login
-    const magicToken = generateMagicToken();
-    const tokenHash = hashMagicToken(magicToken);
-    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
-
-    await prisma.user.update({
-      where: { id: newUser.id },
-      data: {
         magicLoginTokenHash: tokenHash,
         magicLoginExpiresAt: expiresAt,
       },
     });
+    createdUserId = newUser.id;
 
-    const flow = req.body?.flow;
+    const flow = check.data.flow;
     let loginUrl = `${getFrontendBaseUrl()}/auth/login`;
     let magicLinkUrl = `${getFrontendBaseUrl()}/auth/magic?token=${magicToken}`;
-    if (flow && typeof flow === "string") {
+    if (flow) {
       loginUrl += `?flow=${encodeURIComponent(flow)}`;
       magicLinkUrl += `&flow=${encodeURIComponent(flow)}`;
     }
 
-    await sendPasswordEmail({ to: email, password, loginUrl, magicLinkUrl });
+    try {
+      await sendPasswordEmail({ to: email, password, loginUrl, magicLinkUrl });
+    } catch (emailError) {
+      await prisma.user.delete({ where: { id: newUser.id } });
+      createdUserId = null;
+      logger.error(
+        "Error sending signup email in start",
+        emailError as Error,
+        logger.getRequestContext(req)
+      );
+      res.status(StatusCodes.BAD_GATEWAY).json({
+        error: "We could not send your login email. Please use a valid email and try again.",
+      });
+      return;
+    }
 
     res.status(StatusCodes.OK).json({
       message: "Account created! Check your email for login credentials.",
     });
   } catch (error) {
+    if (createdUserId) {
+      await prisma.user.delete({ where: { id: createdUserId } }).catch(() => {});
+    }
     logger.error("Error in start (magic login)", error as Error, logger.getRequestContext(req));
     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: "Internal Server Error" });
   }
@@ -359,16 +364,11 @@ export async function verifyMagic(req: Request, res: Response) {
       select: {
         id: true,
         role: true,
-        isActive: true,
       },
     });
 
     if (!user) {
       res.status(StatusCodes.UNAUTHORIZED).json({ error: "Invalid or expired token" });
-      return;
-    }
-    if (!user.isActive) {
-      res.status(StatusCodes.FORBIDDEN).json({ error: "Account is inactive" });
       return;
     }
 

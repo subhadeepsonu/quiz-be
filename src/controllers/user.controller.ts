@@ -3,13 +3,11 @@ import { StatusCodes } from "http-status-codes";
 import { prisma } from "../db";
 import { Prisma, Role } from "@prisma/client";
 import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
-import { registerValidator } from "../validator/auth.validator";
 import { changePasswordValidator } from "../validator/auth.validator";
 import { AuthenticatedRequest } from "../middleware/middleware";
 import { computeEntitlements } from "../services/entitlements";
 import { logger } from "../utils/logger";
-import { updateMeValidator } from "../validator/user.validator";
+import { updateMeValidator, adminCreateUserValidator } from "../validator/user.validator";
 
 type AdminAccessLevel = "DIAGNOSTIC_ONLY" | "TRIAL_ACTIVE" | "SUBSCRIBED_ACTIVE";
 
@@ -34,6 +32,42 @@ function computeAdminAccessLevel(params: {
     return "TRIAL_ACTIVE";
   }
   return "DIAGNOSTIC_ONLY";
+}
+
+const adminUserSelect = {
+  id: true,
+  name: true,
+  email: true,
+  role: true,
+  isActive: true,
+  createdAt: true,
+  trialEndsAt: true,
+  trialUsedAt: true,
+} as const;
+
+async function revokeActivePaidMembership(userId: string, now = new Date()) {
+  await prisma.subscription.updateMany({
+    where: {
+      userId,
+      status: "active",
+      endDate: { gt: now },
+    },
+    data: {
+      status: "cancelled",
+      endDate: now,
+      currentPeriodEnd: now,
+    },
+  });
+}
+
+async function mapSingleAdminUserRow(userId: string) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: adminUserSelect,
+  });
+  if (!user) return null;
+  const [row] = await mapUsersToAdminRows([user]);
+  return row;
 }
 
 async function batchDailyQuestionAttempts(
@@ -116,6 +150,7 @@ async function mapUsersToAdminRows(
       email: u.email,
       role: u.role,
       isActive: u.isActive,
+      membershipActive: accessLevel !== "DIAGNOSTIC_ONLY",
       createdAt: u.createdAt,
       accessLevel,
       trialEndsAt: u.trialEndsAt,
@@ -218,8 +253,32 @@ export async function getAdminAnalytics(req: Request, res: Response) {
       usersAtDailyLimitRows,
     ] = await Promise.all([
       prisma.user.count(),
-      prisma.user.count({ where: { isActive: true } }),
-      prisma.user.count({ where: { isActive: false } }),
+      prisma.user.count({
+        where: {
+          OR: [
+            { trialEndsAt: { gt: now } },
+            {
+              subscriptions: {
+                some: { status: "active", endDate: { gt: now } },
+              },
+            },
+          ],
+        },
+      }),
+      prisma.user.count({
+        where: {
+          AND: [
+            {
+              OR: [{ trialEndsAt: null }, { trialEndsAt: { lte: now } }],
+            },
+            {
+              subscriptions: {
+                none: { status: "active", endDate: { gt: now } },
+              },
+            },
+          ],
+        },
+      }),
       prisma.subscription.count({
         where: { status: "active", endDate: { gt: now } },
       }),
@@ -350,7 +409,7 @@ export async function extendUserMembership(req: AuthenticatedRequest, res: Respo
           : extensionType === "MONTH_6"
             ? 180
             : extensionType === "FREE_TRIAL"
-              ? 30
+              ? 3
               : null;
     const effectiveDays = extensionDaysFromType ?? days;
     const forceTrial = extensionType === "FREE_TRIAL" || req.body?.extendAsTrial === true;
@@ -397,6 +456,7 @@ export async function extendUserMembership(req: AuthenticatedRequest, res: Respo
     });
 
     if (forceTrial) {
+      await revokeActivePaidMembership(id, now);
       const trialBase =
         existingUser.trialEndsAt && existingUser.trialEndsAt.getTime() > now.getTime()
           ? new Date(existingUser.trialEndsAt)
@@ -447,7 +507,11 @@ export async function extendUserMembership(req: AuthenticatedRequest, res: Respo
             trialUsedAt: existingUser.trialUsedAt ?? now,
           },
         });
-        const [row] = await mapUsersToAdminRows([existingUser]);
+        const row = await mapSingleAdminUserRow(id);
+        if (!row) {
+          res.status(StatusCodes.NOT_FOUND).json({ error: "User not found" });
+          return;
+        }
         res.status(StatusCodes.OK).json({
           message: "Trial extended successfully",
           data: row,
@@ -478,7 +542,11 @@ export async function extendUserMembership(req: AuthenticatedRequest, res: Respo
       });
     }
 
-    const [row] = await mapUsersToAdminRows([existingUser]);
+    const row = await mapSingleAdminUserRow(id);
+    if (!row) {
+      res.status(StatusCodes.NOT_FOUND).json({ error: "User not found" });
+      return;
+    }
     res.status(StatusCodes.OK).json({
       message: "Membership extended successfully",
       data: row,
@@ -501,20 +569,8 @@ export async function patchUserActive(req: AuthenticatedRequest, res: Response) 
       res.status(StatusCodes.BAD_REQUEST).json({ error: "Body must include isActive: boolean" });
       return;
     }
-    if (req.userId === id && isActive === false) {
-      res.status(StatusCodes.BAD_REQUEST).json({
-        error: "You cannot deactivate your own account while signed in.",
-      });
-      return;
-    }
-    const existing = await prisma.user.findUnique({ where: { id } });
-    if (!existing) {
-      res.status(StatusCodes.NOT_FOUND).json({ error: "User not found" });
-      return;
-    }
-    const updated = await prisma.user.update({
+    const existing = await prisma.user.findUnique({
       where: { id },
-      data: { isActive },
       select: {
         id: true,
         name: true,
@@ -526,9 +582,38 @@ export async function patchUserActive(req: AuthenticatedRequest, res: Response) 
         trialUsedAt: true,
       },
     });
-    const [row] = await mapUsersToAdminRows([updated]);
+    if (!existing) {
+      res.status(StatusCodes.NOT_FOUND).json({ error: "User not found" });
+      return;
+    }
+
+    const now = new Date();
+    if (!isActive) {
+      await revokeActivePaidMembership(id, now);
+      await prisma.user.update({
+        where: { id },
+        data: { trialEndsAt: now },
+      });
+    } else {
+      await revokeActivePaidMembership(id, now);
+      const trialEnd = new Date(now);
+      trialEnd.setDate(trialEnd.getDate() + 3);
+      await prisma.user.update({
+        where: { id },
+        data: {
+          trialEndsAt: trialEnd,
+          trialUsedAt: existing.trialUsedAt ?? now,
+        },
+      });
+    }
+
+    const row = await mapSingleAdminUserRow(id);
+    if (!row) {
+      res.status(StatusCodes.NOT_FOUND).json({ error: "User not found" });
+      return;
+    }
     res.status(StatusCodes.OK).json({
-      message: "User updated",
+      message: "Membership updated",
       data: row,
     });
   } catch (error) {
@@ -677,8 +762,7 @@ export async function getUser(req: Request, res: Response) {
 
 export async function createUser(req: Request, res: Response) {
   try {
-    const body = req.body;
-    const check = registerValidator.safeParse(body);
+    const check = adminCreateUserValidator.safeParse(req.body);
     if (!check.success) {
       res.status(StatusCodes.BAD_REQUEST).json({
         error: "Invalid request body",
@@ -699,35 +783,86 @@ export async function createUser(req: Request, res: Response) {
     }
     const hashedPassword = bcrypt.hashSync(check.data.password, 10);
     const role: Role =
-      body?.role === Role.admin || body?.role === Role.editor || body?.role === Role.user
-        ? body.role
+      check.data.role === Role.admin || check.data.role === Role.editor || check.data.role === Role.user
+        ? check.data.role
         : Role.user;
-    const newUser = await prisma.user.upsert({
-      where: {
-        email: check.data.email,
-      },
-      update: {
-        name: check.data.name,
-        password: hashedPassword,
-        role,
-      },
-      create: {
+    const newUser = await prisma.user.create({
+      data: {
         name: check.data.name,
         email: check.data.email,
         password: hashedPassword,
         role,
       },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        isActive: true,
+        createdAt: true,
+        trialEndsAt: true,
+        trialUsedAt: true,
+      },
     });
-    const user = {
-      id: newUser.id,
-      role: newUser.role,
-    };
-    const token = jwt.sign(user, process.env.JWT_SECRET!, {
-      expiresIn: "30d",
+
+    const now = new Date();
+    if (check.data.membershipType === "FREE_TRIAL") {
+      const trialEnd = new Date(now);
+      trialEnd.setDate(trialEnd.getDate() + 3);
+      await prisma.user.update({
+        where: { id: newUser.id },
+        data: {
+          trialEndsAt: trialEnd,
+          trialUsedAt: now,
+        },
+      });
+    } else if (check.data.membershipType === "PLAN" && check.data.planId) {
+      const plan = await prisma.plan.findFirst({
+        where: { id: check.data.planId, isActive: true },
+        select: { id: true, duration: true },
+      });
+      if (!plan) {
+        await prisma.user.delete({ where: { id: newUser.id } });
+        res.status(StatusCodes.BAD_REQUEST).json({
+          error: "Selected plan is not active or does not exist",
+        });
+        return;
+      }
+      const endDate = new Date(now);
+      endDate.setMonth(endDate.getMonth() + plan.duration);
+      await prisma.subscription.create({
+        data: {
+          userId: newUser.id,
+          planId: plan.id,
+          status: "active",
+          startDate: now,
+          endDate,
+          currentPeriodEnd: endDate,
+        },
+      });
+    }
+
+    const refreshedUser = await prisma.user.findUnique({
+      where: { id: newUser.id },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        isActive: true,
+        createdAt: true,
+        trialEndsAt: true,
+        trialUsedAt: true,
+      },
     });
+    if (!refreshedUser) {
+      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: "Internal Server Error" });
+      return;
+    }
+    const [row] = await mapUsersToAdminRows([refreshedUser]);
     res.status(StatusCodes.CREATED).json({
-      message: "User registered successfully",
-      token: token,
+      message: "User created successfully",
+      data: row,
     });
     return;
   } catch (error) {

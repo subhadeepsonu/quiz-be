@@ -20,6 +20,12 @@ export const verifyForgotPasswordValidator = z.object({
   newPassword: z.string().min(8),
 });
 
+export const startValidator = z.object({
+  email: z.string().email(),
+  name: z.string().trim().min(1).optional(),
+  flow: z.string().optional(),
+});
+
 export const changePasswordValidator = z.object({
   currentPassword: z.string().min(1),
   newPassword: z.string().min(8),

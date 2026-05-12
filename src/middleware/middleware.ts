@@ -1,7 +1,6 @@
-import { Role } from "@prisma/client";
 import { Request, Response, NextFunction } from "express";
+import { Role } from "@prisma/client";
 import jwt from "jsonwebtoken";
-import { prisma } from "../db";
 
 export interface AuthenticatedRequest extends Request {
   userId?: string;
@@ -40,15 +39,6 @@ export function middleware(requiredRoles: Role[]) {
         res
           .status(403)
           .json({ message: "Forbidden: Insufficient permissions" });
-        return;
-      }
-
-      const account = await prisma.user.findUnique({
-        where: { id: decoded.id },
-        select: { isActive: true },
-      });
-      if (!account || !account.isActive) {
-        res.status(403).json({ message: "Account is inactive" });
         return;
       }
 
