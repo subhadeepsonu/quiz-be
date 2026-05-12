@@ -60,6 +60,78 @@ async function revokeActivePaidMembership(userId: string, now = new Date()) {
   });
 }
 
+function addDaysFrom(base: Date, days: number) {
+  const end = new Date(base);
+  end.setDate(end.getDate() + days);
+  return end;
+}
+
+function addMonthsFrom(base: Date, months: number) {
+  const end = new Date(base);
+  end.setMonth(end.getMonth() + months);
+  return end;
+}
+
+async function findActivePlan(params: { planId?: string | null; months?: number }) {
+  if (params.planId) {
+    return prisma.plan.findFirst({
+      where: { id: params.planId, isActive: true },
+      select: { id: true, duration: true },
+    });
+  }
+  if (params.months) {
+    return prisma.plan.findFirst({
+      where: { isActive: true, duration: params.months },
+      orderBy: { createdAt: "asc" },
+      select: { id: true, duration: true },
+    });
+  }
+  return prisma.plan.findFirst({
+    where: { isActive: true },
+    orderBy: { createdAt: "asc" },
+    select: { id: true, duration: true },
+  });
+}
+
+async function setTrialMembershipFromNow(params: {
+  userId: string;
+  days: number;
+  trialUsedAt: Date | null;
+  now: Date;
+}) {
+  await revokeActivePaidMembership(params.userId, params.now);
+  await prisma.user.update({
+    where: { id: params.userId },
+    data: {
+      trialEndsAt: addDaysFrom(params.now, params.days),
+      trialUsedAt: params.trialUsedAt ?? params.now,
+    },
+  });
+}
+
+async function setPaidMembershipFromNow(params: {
+  userId: string;
+  endDate: Date;
+  planId: string;
+  now: Date;
+}) {
+  await revokeActivePaidMembership(params.userId, params.now);
+  await prisma.user.update({
+    where: { id: params.userId },
+    data: { trialEndsAt: params.now },
+  });
+  await prisma.subscription.create({
+    data: {
+      userId: params.userId,
+      planId: params.planId,
+      status: "active",
+      startDate: params.now,
+      endDate: params.endDate,
+      currentPeriodEnd: params.endDate,
+    },
+  });
+}
+
 async function mapSingleAdminUserRow(userId: string) {
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -400,29 +472,38 @@ export async function extendUserMembership(req: AuthenticatedRequest, res: Respo
       typeof planIdRaw === "string" && planIdRaw.trim().length > 0
         ? planIdRaw.trim()
         : null;
+    const applyAsTrial =
+      extensionType === "FREE_TRIAL" || req.body?.extendAsTrial === true;
 
-    const extensionDaysFromType =
+    const presetMonths =
       extensionType === "MONTH_1"
-        ? 30
+        ? 1
         : extensionType === "MONTH_3"
-          ? 90
+          ? 3
           : extensionType === "MONTH_6"
-            ? 180
-            : extensionType === "FREE_TRIAL"
-              ? 3
-              : null;
-    const effectiveDays = extensionDaysFromType ?? days;
-    const forceTrial = extensionType === "FREE_TRIAL" || req.body?.extendAsTrial === true;
+            ? 6
+            : null;
+    const presetTrialDays = extensionType === "FREE_TRIAL" ? 3 : null;
+    const customDays = Number.isInteger(days) && days > 0 ? days : null;
 
-    if (
-      !Number.isInteger(effectiveDays) ||
-      effectiveDays === 0 ||
-      effectiveDays > 3650 ||
-      effectiveDays < -3650
-    ) {
+    if (extensionType === "FREE_TRIAL") {
+      // handled below
+    } else if (presetMonths) {
+      // handled below
+    } else if (customDays) {
+      // handled below
+    } else {
       res.status(StatusCodes.BAD_REQUEST).json({
         error:
-          "Provide extensionType (MONTH_1, MONTH_3, MONTH_6, FREE_TRIAL) or a valid days value (-3650 to 3650, excluding 0)",
+          "Provide extensionType (MONTH_1, MONTH_3, MONTH_6, FREE_TRIAL) or a valid days value (1-3650)",
+      });
+      return;
+    }
+
+    if (customDays && customDays > 3650) {
+      res.status(StatusCodes.BAD_REQUEST).json({
+        error:
+          "Provide extensionType (MONTH_1, MONTH_3, MONTH_6, FREE_TRIAL) or a valid days value (1-3650)",
       });
       return;
     }
@@ -431,12 +512,6 @@ export async function extendUserMembership(req: AuthenticatedRequest, res: Respo
       where: { id },
       select: {
         id: true,
-        name: true,
-        email: true,
-        role: true,
-        isActive: true,
-        createdAt: true,
-        trialEndsAt: true,
         trialUsedAt: true,
       },
     });
@@ -446,99 +521,66 @@ export async function extendUserMembership(req: AuthenticatedRequest, res: Respo
     }
 
     const now = new Date();
-    const activeSubscription = await prisma.subscription.findFirst({
-      where: {
+
+    if (applyAsTrial) {
+      const trialDays = presetTrialDays ?? customDays;
+      if (!trialDays) {
+        res.status(StatusCodes.BAD_REQUEST).json({
+          error:
+            "Provide extensionType (MONTH_1, MONTH_3, MONTH_6, FREE_TRIAL) or a valid days value (1-3650)",
+        });
+        return;
+      }
+      await setTrialMembershipFromNow({
         userId: id,
-        status: "active",
-        endDate: { gt: now },
-      },
-      orderBy: { endDate: "desc" },
-    });
-
-    if (forceTrial) {
-      await revokeActivePaidMembership(id, now);
-      const trialBase =
-        existingUser.trialEndsAt && existingUser.trialEndsAt.getTime() > now.getTime()
-          ? new Date(existingUser.trialEndsAt)
-          : new Date(now);
-      trialBase.setDate(trialBase.getDate() + effectiveDays);
-
-      await prisma.user.update({
-        where: { id },
-        data: {
-          trialEndsAt: trialBase,
-          trialUsedAt: existingUser.trialUsedAt ?? now,
-        },
-      });
-    } else if (activeSubscription) {
-      const newEndDate = new Date(activeSubscription.endDate);
-      newEndDate.setDate(newEndDate.getDate() + effectiveDays);
-      await prisma.subscription.update({
-        where: { id: activeSubscription.id },
-        data: {
-          endDate: newEndDate,
-          currentPeriodEnd: newEndDate,
-          status: "active",
-        },
+        days: trialDays,
+        trialUsedAt: existingUser.trialUsedAt,
+        now,
       });
     } else {
-      const latestSubscription = await prisma.subscription.findFirst({
-        where: { userId: id },
-        orderBy: { endDate: "desc" },
-        select: { planId: true },
-      });
+      let selectedPlan = null;
+      let endDate: Date | null = null;
 
-      let targetPlanId = planId ?? latestSubscription?.planId ?? null;
-      if (!targetPlanId) {
-        const fallbackPlan = await prisma.plan.findFirst({
-          where: { isActive: true },
-          orderBy: { createdAt: "asc" },
-          select: { id: true },
-        });
-        targetPlanId = fallbackPlan?.id ?? null;
-      }
-      if (!targetPlanId) {
-        const trialEnd = new Date(now);
-        trialEnd.setDate(trialEnd.getDate() + effectiveDays);
-        await prisma.user.update({
-          where: { id },
-          data: {
-            trialEndsAt: trialEnd,
-            trialUsedAt: existingUser.trialUsedAt ?? now,
-          },
-        });
-        const row = await mapSingleAdminUserRow(id);
-        if (!row) {
-          res.status(StatusCodes.NOT_FOUND).json({ error: "User not found" });
+      if (presetMonths) {
+        selectedPlan = await findActivePlan({ planId, months: presetMonths });
+        if (!selectedPlan) {
+          res.status(StatusCodes.BAD_REQUEST).json({
+            error: "No active plan found for the selected membership option",
+          });
           return;
         }
-        res.status(StatusCodes.OK).json({
-          message: "Trial extended successfully",
-          data: row,
+        endDate = addMonthsFrom(now, selectedPlan.duration);
+      } else if (customDays) {
+        const latestSubscription = await prisma.subscription.findFirst({
+          where: { userId: id },
+          orderBy: { endDate: "desc" },
+          select: { planId: true },
         });
-        return;
+        selectedPlan = await findActivePlan({
+          planId: planId ?? latestSubscription?.planId ?? null,
+        });
+        if (!selectedPlan) {
+          res.status(StatusCodes.BAD_REQUEST).json({
+            error: "No active plan available for paid membership",
+          });
+          return;
+        }
+        endDate = addDaysFrom(now, customDays);
       }
-      const selectedPlan = await prisma.plan.findFirst({
-        where: { id: targetPlanId, isActive: true },
-        select: { id: true },
-      });
-      if (!selectedPlan) {
+
+      if (!selectedPlan || !endDate) {
         res.status(StatusCodes.BAD_REQUEST).json({
-          error: "Selected plan is not active or does not exist",
+          error:
+            "Provide extensionType (MONTH_1, MONTH_3, MONTH_6, FREE_TRIAL) or a valid days value (1-3650)",
         });
         return;
       }
-      const endDate = new Date(now);
-      endDate.setDate(endDate.getDate() + effectiveDays);
-      await prisma.subscription.create({
-        data: {
-          userId: id,
-          planId: selectedPlan.id,
-          status: "active",
-          startDate: now,
-          endDate,
-          currentPeriodEnd: endDate,
-        },
+
+      await setPaidMembershipFromNow({
+        userId: id,
+        endDate,
+        planId: selectedPlan.id,
+        now,
       });
     }
 
@@ -548,7 +590,7 @@ export async function extendUserMembership(req: AuthenticatedRequest, res: Respo
       return;
     }
     res.status(StatusCodes.OK).json({
-      message: "Membership extended successfully",
+      message: "Membership updated successfully",
       data: row,
     });
   } catch (error) {
